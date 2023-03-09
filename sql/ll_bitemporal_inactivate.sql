@@ -1,4 +1,4 @@
- CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_inactivate(p_schema_name text,
+CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_inactivate(p_schema_name text,
   p_table_name text
 , p_search_fields TEXT  -- search fields
 , p_search_values TEXT  --  search values
@@ -96,4 +96,27 @@ RETURN v_rowcount;
 END;
 $BODY$ LANGUAGE plpgsql;
 
-
+CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_inactivate(
+  p_schema_name TEXT,
+  p_table_name TEXT,
+  p_search_fields TEXT,  -- search fields
+  p_search_values TEXT,  --  search values
+  p_effective temporal_relationships.timeperiod, -- inactive starting
+  p_asserted temporal_relationships.timeperiod -- will be asserted
+)
+RETURNS INTEGER AS
+  $BODY$
+    BEGIN
+      RETURN (
+        SELECT * FROM bitemporal_internal.ll_bitemporal_inactivate(
+          p_schema_name,
+          p_table_name,
+          p_search_fields,
+          p_search_values,
+          p_effective,
+          temporal_relationships.timeperiod(now(), 'infinity')
+        )
+      );
+    END;
+  $BODY$
+LANGUAGE plpgsql;

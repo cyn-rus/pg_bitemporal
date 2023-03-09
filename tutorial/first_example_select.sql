@@ -1,4 +1,3 @@
-
 SELECT 
    o.order_id, 
    s.name AS staff_name, 

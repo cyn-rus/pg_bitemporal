@@ -116,37 +116,38 @@ BEGIN
 END;
 $f$;
 
-create
-type bitemporal_internal.bitemporal_pg_constraint
-as
-(
-oid	oid
-,conname	name
-,connamespace	oid
-,contype	"char"
-,condeferrable	bool
-,condeferred	bool
-,convalidated	bool
-,conrelid	oid
-,contypid	oid
-,conindid	oid
--- ,conparentid	oid
-,confrelid	oid
-,confupdtype	"char"
-,confdeltype	"char"
-,confmatchtype	"char"
-,conislocal	bool
-,coninhcount	int4
-,connoinherit	bool
-,conkey	int2[]
-,confkey	int2[]
-,conpfeqop	oid[]
-,conppeqop	oid[]
-,conffeqop	oid[]
-,conexclop	oid[]
-,conbin	pg_node_tree
-, consrc	text
-);
+DO $$ BEGIN
+  CREATE TYPE bitemporal_internal.bitemporal_pg_constraint AS (
+    oid	oid
+    ,conname	name
+    ,connamespace	oid
+    ,contype	"char"
+    ,condeferrable	bool
+    ,condeferred	bool
+    ,convalidated	bool
+    ,conrelid	oid
+    ,contypid	oid
+    ,conindid	oid
+    -- ,conparentid	oid
+    ,confrelid	oid
+    ,confupdtype	"char"
+    ,confdeltype	"char"
+    ,confmatchtype	"char"
+    ,conislocal	bool
+    ,coninhcount	int4
+    ,connoinherit	bool
+    ,conkey	int2[]
+    ,confkey	int2[]
+    ,conpfeqop	oid[]
+    ,conppeqop	oid[]
+    ,conffeqop	oid[]
+    ,conexclop	oid[]
+    ,conbin	pg_node_tree
+    , consrc	text
+  );
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
 create or replace
 function bitemporal_internal.find_constraints(table_name text, _criteria text )

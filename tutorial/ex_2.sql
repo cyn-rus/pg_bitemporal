@@ -1,3 +1,7 @@
+CREATE SCHEMA IF NOT EXISTS bt_tutorial;
+grant usage on schema bitemporal_internal to public;
+
+-- Create Table
 SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
     'bt_tutorial',
     'staff_bt',
@@ -48,19 +52,14 @@ SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
    'order_id,order_line_id');
   
    
-  
-DROP SEQUENCE IF EXISTS bt_tutorial.staff_id_seq;
-CREATE SEQUENCE bt_tutorial.staff_id_seq;
-DROP SEQUENCE IF EXISTS bt_tutorial.cust_id_seq;
-CREATE SEQUENCE bt_tutorial.cust_id_seq;
-DROP SEQUENCE IF EXISTS bt_tutorial.product_id_seq;
-CREATE SEQUENCE bt_tutorial.product_id_seq;
-DROP SEQUENCE IF EXISTS bt_tutorial.order_id_seq;
-CREATE SEQUENCE bt_tutorial.order_id_seq;
-DROP SEQUENCE IF EXISTS bt_tutorial.order_line_id_seq;
-CREATE SEQUENCE bt_tutorial.order_line_id_seq;
+-- Create Sequence
+CREATE SEQUENCE IF NOT EXISTS bt_tutorial.staff_id_seq;
+CREATE SEQUENCE IF NOT EXISTS bt_tutorial.cust_id_seq;
+CREATE SEQUENCE IF NOT EXISTS bt_tutorial.product_id_seq;
+CREATE SEQUENCE IF NOT EXISTS bt_tutorial.order_id_seq;
+CREATE SEQUENCE IF NOT EXISTS bt_tutorial.order_line_id_seq;
 
-
+-- Insert
 select * from bitemporal_internal.ll_bitemporal_insert('bt_tutorial.staff_bt'
 ,$$staff_id, staff_name, staff_location$$
 ,quote_literal(nextval('staff_id_seq'))||$$,
