@@ -1,3 +1,6 @@
+CREATE SCHEMA IF NOT EXISTS bt_tutorial;
+grant usage on schema bitemporal_internal to public;
+
 SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
     'bt_tutorial',
     'staff_bt',
@@ -171,7 +174,7 @@ c.phone AS cust_phone,
 p.product_name, 
 p.price,
 l.qty
-    FROM bt_tutorialo.rder_line_bt l
+    FROM bt_tutorial.order_line_bt l
     JOIN bt_tutorial.order_bt o ON o.order_id = l.order_id
     JOIN bt_tutorial.product_bt p ON p.product_id = l.product_id
     JOIN bt_tutorial.staff_bt s ON s.staff_id = o.staff_id
