@@ -13,7 +13,7 @@ SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
   'staff_id'
 );
    
- SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
+SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
     'bt_tutorial',
     'cust_bt',
 	$$cust_id int not null, 
@@ -73,7 +73,7 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
     'mystaff',
     'mylocation'
   $$,
-  temporal_relationships.timeperiod(now(), 'infinity') --effective
+  temporal_relationships.timeperiod('2023-03-01', 'infinity') --effective
 );
 
 SELECT * FROM bitemporal_internal.ll_bitemporal_insert('bt_tutorial.cust_bt'
@@ -157,23 +157,20 @@ WHERE l.order_id=1
   AND order_created_at<@s.effective AND now()<@s.asserted;
 
 -- Correction
-SELECT * FROM bt_tutorial.product_bt;
 SELECT * FROM bitemporal_internal.ll_bitemporal_correction(
-  'bt_tutorial',
-  'product_bt',
+  'bt_tutorial.product_bt',
   'price',
   '275',
   'product_id',
   '2',
   temporal_relationships.timeperiod('2023-03-10 01:26:16.107912+07', 'infinity')
 );
-SELECT * FROM bt_tutorial.product_bt;
 
 ---corrected price
 SELECT
 o.order_id, 
 staff_name, 
-staff_location, 
+staff_location,
 c.cust_name, 
 c.phone AS cust_phone, 
 p.product_name, 
@@ -192,7 +189,6 @@ AND order_created_at<@p.effective AND now()<@p.asserted
 and order_created_at<@s.effective AND now()<@s.asserted;
 
 --original price
-
 SELECT
 o.order_id, 
 staff_name, 
@@ -213,3 +209,17 @@ AND order_created_at<@o.effective AND order_created_at<@o.asserted
 AND order_created_at<@c.effective AND order_created_at<@c.asserted
 AND order_created_at<@p.effective AND order_created_at<@p.asserted
 AND order_created_at<@s.effective AND order_created_at<@s.asserted;
+
+-- Inactivate
+SELECT * FROM bitemporal_internal.ll_bitemporal_inactivate(
+  'bt_tutorial.cust_bt',
+  'cust_id',
+  '1'
+);
+
+-- Delete
+SELECT * FROM bitemporal_internal.ll_bitemporal_delete(
+  'bt_tutorial.cust_bt',
+  'cust_id',
+  '1'
+);
