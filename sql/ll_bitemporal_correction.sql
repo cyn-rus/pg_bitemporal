@@ -7,8 +7,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_correction(
   p_search_values text,
   p_effective temporal_relationships.timeperiod,
   p_now temporal_relationships.time_endpoint
-)
-RETURNS INTEGER AS
+) RETURNS INTEGER AS
   $BODY$
     DECLARE
       v_sql TEXT;
@@ -16,27 +15,27 @@ RETURNS INTEGER AS
       v_list_of_fields_to_insert TEXT;
       v_table_attr TEXT[];
       v_now temporal_relationships.time_endpoint := p_now;-- for compatiability with the previous version
-      v_serial_key text:=p_table_name||'_key';
-      v_table text:=p_schema_name||'.'||p_table_name;
-      v_effective_start temporal_relationships.time_endpoint := lower(p_effective);
+      v_serial_key text := p_table_name || '_key';
+      v_table text := p_schema_name || '.' || p_table_name;
+      v_effective_start temporal_relationships.time_endpoint := LOWER(p_effective);
       v_keys INT[];
       v_keys_old INT[];
     BEGIN
       v_table_attr := bitemporal_internal.ll_bitemporal_list_of_fields(v_table);
       IF ARRAY_LENGTH(v_table_attr, 1) = 0
         THEN RAISE EXCEPTION 'Empty list of fields for a table: %', v_table; 
-          RETURN v_rowcount;
+        RETURN v_rowcount;
       END IF;
 
       v_list_of_fields_to_insert := ARRAY_TO_STRING(v_table_attr, ',', '');
-      EXECUTE format(
+      EXECUTE FORMAT(
         $u$
           WITH updt AS (
             UPDATE %s SET asserted = temporal_relationships.timeperiod_range(lower(asserted), %L, '[)')
             WHERE ( %s )=( %s )
-              AND %L=lower(effective)
-              AND lower(asserted)='infinity' 
-              AND lower(asserted)<%L
+              AND %L = LOWER(effective)
+              AND UPPER(asserted) = 'infinity' 
+              AND LOWER(asserted) < %L
             RETURNING %s
           )
           SELECT array_agg(%s) FROM updt
@@ -69,20 +68,20 @@ RETURNS INTEGER AS
         v_list_of_fields_to_insert,
         v_table,
         v_serial_key,
-        COALESCE(ARRAY_TO_STRING(v_keys_old,','),'NULL'),
+        COALESCE(ARRAY_TO_STRING(v_keys_old, ','), 'NULL'),
         v_serial_key,
         v_serial_key
       ) INTO v_keys;
       --raise notice 'sql%', v_sql;  
 
-      --raise notice 'sql%', v_sql;  
-      IF COALESCE(ARRAY_TO_STRING(v_keys_old,',')) IS NULL 
+      --raise notice 'sql%', v_sql;
+      IF COALESCE(ARRAY_TO_STRING(v_keys_old, ',')) IS NULL
         THEN EXECUTE FORMAT(
           $uu$
             UPDATE %s SET ( %s ) = (SELECT %s )
             WHERE ( %s ) = ( %s )
               AND effective = %L
-              AND UPPER(asserted)='infinity'
+              AND UPPER(asserted) = 'infinity'
           $uu$,  --update new assertion rage with new values
           v_table,
           p_list_of_fields,
@@ -91,7 +90,6 @@ RETURNS INTEGER AS
           p_search_values,
           p_effective
         );
-
       ELSE EXECUTE FORMAT(
       -- v_sql:=   
         $uu$
@@ -102,8 +100,8 @@ RETURNS INTEGER AS
         p_list_of_fields,
         p_list_of_values,
         v_serial_key,
-        COALESCE(ARRAY_TO_STRING(v_keys,','), 'NULL'));
-
+        COALESCE(ARRAY_TO_STRING(v_keys, ','), 'NULL')
+      );
         --  raise notice 'sql%', v_sql; 
       END IF;  
       GET DIAGNOSTICS v_rowcount := ROW_COUNT; 
@@ -121,8 +119,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_correction(
   p_search_fields TEXT,
   p_search_values TEXT,
   p_effective temporal_relationships.timeperiod
-)
-RETURNS INTEGER AS
+) RETURNS INTEGER AS
   $BODY$
     BEGIN
       RETURN (
