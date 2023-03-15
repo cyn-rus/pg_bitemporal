@@ -73,7 +73,7 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
     'mystaff',
     'mylocation'
   $$,
-  temporal_relationships.timeperiod('2023-03-09 23:39:31.342852+07', 'infinity') --effective
+  temporal_relationships.timeperiod(now(), 'infinity') --effective
 );
 
 SELECT * FROM bitemporal_internal.ll_bitemporal_insert('bt_tutorial.cust_bt'
@@ -96,7 +96,7 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert('bt_tutorial.product_bt',
   $$product_id, product_name,weight,price$$,
   quote_literal(nextval('bt_tutorial.product_id_seq'))||$$,
   'myproduct2', 200, 250 $$,
-  temporal_relationships.timeperiod(now(), 'infinity'), --effective
+  temporal_relationships.timeperiod('2023-03-10 01:26:16.107912+07', 'infinity'), --effective
   temporal_relationships.timeperiod(now(), 'infinity') --asserted
 );
 
@@ -131,7 +131,7 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_update(
   'staff_location', -- fields to update'
   $$ 'newlocation' $$,  -- values to update with
   'staff_id',  -- search fields
-  '3', --  search values
+  '1', --  search values
   temporal_relationships.timeperiod(now(), 'infinity')
 );
 
@@ -157,6 +157,7 @@ WHERE l.order_id=1
   AND order_created_at<@s.effective AND now()<@s.asserted;
 
 -- Correction
+SELECT * FROM bt_tutorial.product_bt;
 SELECT * FROM bitemporal_internal.ll_bitemporal_correction(
   'bt_tutorial',
   'product_bt',
@@ -166,7 +167,8 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_correction(
   '2',
   temporal_relationships.timeperiod('2023-03-10 01:26:16.107912+07', 'infinity')
 );
-    
+SELECT * FROM bt_tutorial.product_bt;
+
 ---corrected price
 SELECT
 o.order_id, 

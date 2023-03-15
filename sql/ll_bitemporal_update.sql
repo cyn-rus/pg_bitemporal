@@ -7,8 +7,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_update(
   p_search_values TEXT,  --  search values
   p_effective temporal_relationships.timeperiod,  -- effective range of the update
   p_asserted temporal_relationships.timeperiod  -- assertion for the update
-) 
-RETURNS INTEGER AS
+) RETURNS INTEGER AS
   $BODY$
     DECLARE
       v_rowcount INTEGER:=0;
@@ -21,19 +20,19 @@ RETURNS INTEGER AS
       v_keys INT[];
       v_now timestamptz:=now();-- so that we can reference this time
     BEGIN 
-    IF lower(p_asserted)<v_now::date --should we allow this precision?...
-      OR upper(p_asserted)< 'infinity'
-    THEN RAISE EXCEPTION'Asserted interval starts in the past or has a finite end: %', p_asserted; 
-      RETURN v_rowcount;
+    IF lower(p_asserted) < v_now::date --should we allow this precision?...
+      OR upper(p_asserted) < 'infinity'
+        THEN RAISE EXCEPTION 'Asserted interval starts in the past or has a finite end: %', p_asserted; 
+        RETURN v_rowcount;
     END IF;  
 
     v_table_attr := bitemporal_internal.ll_bitemporal_list_of_fields(v_table);
-    IF array_length(v_table_attr,1)=0
-    THEN RAISE EXCEPTION 'Empty list of fields for a table: %', v_table; 
-      RETURN v_rowcount;
+    IF array_length(v_table_attr, 1) = 0
+      THEN RAISE EXCEPTION 'Empty list of fields for a table: %', v_table; 
+        RETURN v_rowcount;
     END IF;
-    v_list_of_fields_to_insert_excl_effective:= ARRAY_TO_STRING(v_table_attr, ',','');
-    v_list_of_fields_to_insert:= v_list_of_fields_to_insert_excl_effective||',effective';
+    v_list_of_fields_to_insert_excl_effective := ARRAY_TO_STRING(v_table_attr, ',', '');
+    v_list_of_fields_to_insert := v_list_of_fields_to_insert_excl_effective || ',effective';
 
 --end assertion period for the old record(s)
 
@@ -45,7 +44,7 @@ RETURNS INTEGER AS
             (temporal_relationships.is_overlaps(effective, %L)
               OR temporal_relationships.is_meets(effective::temporal_relationships.timeperiod, %L)
               OR temporal_relationships.has_finishes(effective::temporal_relationships.timeperiod, %L))
-            AND now()<@ asserted
+            AND now() <@ asserted
           RETURNING %s
         )
         SELECT array_agg(%s)
@@ -79,7 +78,6 @@ RETURNS INTEGER AS
       v_serial_key,
       COALESCE(ARRAY_TO_STRING(v_keys_old,','), 'NULL')
     );
-
 
 ---insert new assertion rage with old values and new effective range
  
@@ -138,8 +136,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_update(
   p_search_fields TEXT,  -- search fields
   p_search_values TEXT,  --  search values
   p_effective temporal_relationships.timeperiod  -- effective range of the update
-)
-RETURNS INTEGER AS
+) RETURNS INTEGER AS
   $BODY$
     BEGIN
       RETURN (
@@ -151,6 +148,32 @@ RETURNS INTEGER AS
           p_search_fields,
           p_search_values,
           p_effective,
+          temporal_relationships.timeperiod(now(), 'infinity')
+        )
+      );
+    END;
+  $BODY$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_update(
+  p_schema_name TEXT,
+  p_table_name TEXT,
+  p_list_of_fields text, -- fields to update
+  p_list_of_values TEXT,  -- values to update with
+  p_search_fields TEXT,  -- search fields
+  p_search_values TEXT  --  search values
+) RETURNS INTEGER AS
+  $BODY$
+    BEGIN
+      RETURN (
+        SELECT * FROM bitemporal_internal.ll_bitemporal_update(
+          p_schema_name,
+          p_table_name,
+          p_list_of_fields,
+          p_list_of_values,
+          p_search_fields,
+          p_search_values,
+          temporal_relationships.timeperiod(now(), 'infinity'),
           temporal_relationships.timeperiod(now(), 'infinity')
         )
       );
