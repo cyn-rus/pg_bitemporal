@@ -1,29 +1,31 @@
 CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_correction(
-  p_schema_name text,
-  p_table_name text,
-  p_list_of_fields text,
-  p_list_of_values text,
-  p_search_fields text,
-  p_search_values text,
+  p_table TEXT,
+  p_list_of_fields TEXT,
+  p_list_of_values TEXT,
+  p_search_fields TEXT,
+  p_search_values TEXT,
   p_effective temporal_relationships.timeperiod,
   p_now temporal_relationships.time_endpoint
 ) RETURNS INTEGER AS
   $BODY$
     DECLARE
-      v_sql TEXT;
-      v_rowcount INTEGER := 0;
+      v_rowcount INT := 0;
       v_list_of_fields_to_insert TEXT;
       v_table_attr TEXT[];
       v_now temporal_relationships.time_endpoint := p_now;-- for compatiability with the previous version
-      v_serial_key text := p_table_name || '_key';
-      v_table text := p_schema_name || '.' || p_table_name;
+      v_serial_key TEXT;
       v_effective_start temporal_relationships.time_endpoint := LOWER(p_effective);
       v_keys INT[];
       v_keys_old INT[];
     BEGIN
-      v_table_attr := bitemporal_internal.ll_bitemporal_list_of_fields(v_table);
+      IF (SELECT p_table LIKE '%.%')
+        THEN v_serial_key := (SELECT split_part(p_table, '.', 2) || '_key');
+      ELSE v_serial_key := p_table || '_key';
+      END IF;
+
+      v_table_attr := bitemporal_internal.ll_bitemporal_list_of_fields(p_table);
       IF ARRAY_LENGTH(v_table_attr, 1) = 0
-        THEN RAISE EXCEPTION 'Empty list of fields for a table: %', v_table; 
+        THEN RAISE EXCEPTION 'Empty list of fields for a table: %', p_table; 
         RETURN v_rowcount;
       END IF;
 
@@ -40,7 +42,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_correction(
           )
           SELECT array_agg(%s) FROM updt
         $u$,  --end assertion period for the old record(s), if any
-        v_table,
+        p_table,
         v_now,
         p_search_fields,
         p_search_values,
@@ -63,10 +65,10 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_correction(
           )
           SELECT array_agg(%s) FROM inst  --insert new assertion rage with old values where applicable 
         $i$,
-        v_table,
+        p_table,
         v_list_of_fields_to_insert,
         v_list_of_fields_to_insert,
-        v_table,
+        p_table,
         v_serial_key,
         COALESCE(ARRAY_TO_STRING(v_keys_old, ','), 'NULL'),
         v_serial_key,
@@ -83,7 +85,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_correction(
               AND effective = %L
               AND UPPER(asserted) = 'infinity'
           $uu$,  --update new assertion rage with new values
-          v_table,
+          p_table,
           p_list_of_fields,
           p_list_of_values,
           p_search_fields,
@@ -96,7 +98,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_correction(
           UPDATE %s SET ( %s ) = ( SELECT %s )
           WHERE ( %s ) IN ( %s )
         $uu$,  --update new assertion rage with new values
-        v_table,
+        p_table,
         p_list_of_fields,
         p_list_of_values,
         v_serial_key,
@@ -112,8 +114,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_correction(
 LANGUAGE plpgsql VOLATILE; 
  
 CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_correction(
-  p_schema_name TEXT,
-  p_table_name TEXT,
+  p_table TEXT,
   p_list_of_fields TEXT,
   p_list_of_values TEXT,
   p_search_fields TEXT,
@@ -124,8 +125,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_correction(
     BEGIN
       RETURN (
         SELECT * FROM bitemporal_internal.ll_bitemporal_correction(
-          p_schema_name,
-          p_table_name,
+          p_table,
           p_list_of_fields,
           p_list_of_values,
           p_search_fields,

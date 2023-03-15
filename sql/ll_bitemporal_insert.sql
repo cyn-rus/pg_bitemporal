@@ -7,7 +7,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_insert(
 ) RETURNS INTEGER AS
   $BODY$
     DECLARE
-      v_rowcount INTEGER;
+      v_rowcount INT;
     BEGIN
       EXECUTE FORMAT(
         $i$

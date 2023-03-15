@@ -1,6 +1,5 @@
 CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_update(
-  p_schema_name TEXT,
-  p_table_name TEXT,
+  p_table TEXT,
   p_list_of_fields text, -- fields to update
   p_list_of_values TEXT,  -- values to update with
   p_search_fields TEXT,  -- search fields
@@ -10,25 +9,29 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_update(
 ) RETURNS INTEGER AS
   $BODY$
     DECLARE
-      v_rowcount INTEGER:=0;
-      v_list_of_fields_to_insert text:=' ';
+      v_rowcount INT := 0;
+      v_list_of_fields_to_insert TEXT := ' ';
       v_list_of_fields_to_insert_excl_effective TEXT;
       v_table_attr TEXT[];
-      v_serial_key text:=p_table_name||'_key';
-      v_table text:=p_schema_name||'.'||p_table_name;
+      v_serial_key TEXT;
       v_keys_old INT[];
       v_keys INT[];
-      v_now timestamptz:=now();-- so that we can reference this time
-    BEGIN 
+      v_now timestamptz := now();-- so that we can reference this time
+    BEGIN
     IF lower(p_asserted) < v_now::date --should we allow this precision?...
       OR upper(p_asserted) < 'infinity'
         THEN RAISE EXCEPTION 'Asserted interval starts in the past or has a finite end: %', p_asserted; 
         RETURN v_rowcount;
     END IF;  
 
-    v_table_attr := bitemporal_internal.ll_bitemporal_list_of_fields(v_table);
+    IF (SELECT p_table LIKE '%.%')
+      THEN v_serial_key := (SELECT split_part(p_table, '.', 2) || '_key');
+    ELSE v_serial_key := p_table || '_key';
+    END IF;
+
+    v_table_attr := bitemporal_internal.ll_bitemporal_list_of_fields(p_table);
     IF array_length(v_table_attr, 1) = 0
-      THEN RAISE EXCEPTION 'Empty list of fields for a table: %', v_table; 
+      THEN RAISE EXCEPTION 'Empty list of fields for a table: %', p_table; 
         RETURN v_rowcount;
     END IF;
     v_list_of_fields_to_insert_excl_effective := ARRAY_TO_STRING(v_table_attr, ',', '');
@@ -50,7 +53,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_update(
         SELECT array_agg(%s)
         FROM updt
       $u$,
-      v_table,
+      p_table,
       p_asserted,
       p_search_fields,
       p_search_values,
@@ -69,18 +72,18 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_update(
           FROM %s
           WHERE ( %s ) in ( %s )
       $i$,
-      v_table,
+      p_table,
       v_list_of_fields_to_insert_excl_effective,
       v_list_of_fields_to_insert_excl_effective,
       p_effective,
       p_asserted,
-      v_table,
+      p_table,
       v_serial_key,
       COALESCE(ARRAY_TO_STRING(v_keys_old,','), 'NULL')
     );
 
 ---insert new assertion rage with old values and new effective range
- 
+
     EXECUTE FORMAT(
       $i$
         WITH inst AS (
@@ -93,12 +96,12 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_update(
         SELECT array_agg(%s)
         FROM inst
       $i$,
-      v_table,
+      p_table,
       v_list_of_fields_to_insert_excl_effective,
       v_list_of_fields_to_insert_excl_effective,
       p_effective,
       p_asserted,
-      v_table,
+      p_table,
       v_serial_key,
       COALESCE(ARRAY_TO_STRING(v_keys_old,','), 'NULL'),
       v_serial_key,
@@ -106,7 +109,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_update(
     ) INTO v_keys;
 
 --update new record(s) in new assertion rage with new values                                  
-                                  
+                    
     EXECUTE FORMAT(
 --v_sql :=
       $u$
@@ -114,13 +117,13 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_update(
           (SELECT %s) 
           WHERE ( %s ) IN ( %s )
       $u$,
-      v_table,
+      p_table,
       p_list_of_fields,
       p_list_of_values,
       v_serial_key,
       COALESCE(ARRAY_TO_STRING(v_keys,','), 'NULL')
     );
-          
+
     GET DIAGNOSTICS v_rowcount:=ROW_COUNT;  
 
     RETURN v_rowcount;
@@ -129,8 +132,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_update(
 LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_update(
-  p_schema_name TEXT,
-  p_table_name TEXT,
+  p_table TEXT,
   p_list_of_fields text, -- fields to update
   p_list_of_values TEXT,  -- values to update with
   p_search_fields TEXT,  -- search fields
@@ -141,8 +143,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_update(
     BEGIN
       RETURN (
         SELECT * FROM bitemporal_internal.ll_bitemporal_update(
-          p_schema_name,
-          p_table_name,
+          p_table,
           p_list_of_fields,
           p_list_of_values,
           p_search_fields,
@@ -156,8 +157,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_update(
 LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_update(
-  p_schema_name TEXT,
-  p_table_name TEXT,
+  p_table TEXT,
   p_list_of_fields text, -- fields to update
   p_list_of_values TEXT,  -- values to update with
   p_search_fields TEXT,  -- search fields
@@ -167,8 +167,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_update(
     BEGIN
       RETURN (
         SELECT * FROM bitemporal_internal.ll_bitemporal_update(
-          p_schema_name,
-          p_table_name,
+          p_table,
           p_list_of_fields,
           p_list_of_values,
           p_search_fields,
