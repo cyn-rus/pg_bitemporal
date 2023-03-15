@@ -3,8 +3,7 @@ grant usage on schema bitemporal_internal to public;
 
 -- Create Table
 SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
-  'bt_tutorial',
-  'staff_bt',
+  'bt_tutorial.staff_bt',
 	$$
     staff_id INT, 
 	  staff_name TEXT NOT NULL,
@@ -14,44 +13,48 @@ SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
 );
    
 SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
-    'bt_tutorial',
-    'cust_bt',
-	$$cust_id int not null, 
-	  cust_name text not null,
-    phone text
+  'bt_tutorial.cust_bt',
+	$$
+    cust_id INT NOT NULL, 
+	  cust_name TEXT NOT NULL,
+    phone TEXT
 	$$,
-   'cust_id');
+  'cust_id'
+);
    
-   SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
-    'bt_tutorial',
-    'product_bt',
-	$$product_id int,
-	  product_name text not null,
-    weight integer not null default(0),
-    price integer not null default(0)
+SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
+  'bt_tutorial.product_bt',
+	$$
+    product_id INT,
+	  product_name TEXT NOT NULL,
+    weight INT NOT NULL default(0),
+    price INT NOT NULL default(0)
 	$$,
-   'product_id');
+  'product_id'
+);
    
- SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
-    'bt_tutorial',
-    'order_bt',
-	$$order_id int not null,
-	  staff_id int not null,
-    cust_id int not null,
+SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
+  'bt_tutorial.order_bt',
+	$$
+    order_id INT NOT NULL,
+	  staff_id INT NOT NULL,
+    cust_id INT NOT NULL,
 	  order_created_at timestamptz
 	$$,
-   'order_id');
+  'order_id'
+);
      
- SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
-    'bt_tutorial',
-    'order_line_bt',
-	$$order_line_id int not null,
-	 order_id int not null,
-   product_id int not null,
-	 qty int not null,
-   order_line_created_at timestamptz
+SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
+  'bt_tutorial.order_line_bt',
+	$$
+    order_line_id INT NOT NULL,
+    order_id INT NOT NULL,
+    product_id INT NOT NULL,
+    qty INT NOT NULL,
+    order_line_created_at timestamptz
 	$$,
-   'order_id,order_line_id');
+  'order_id,order_line_id'
+);
   
 -- Create Sequence
 CREATE SEQUENCE IF NOT EXISTS bt_tutorial.staff_id_seq;
