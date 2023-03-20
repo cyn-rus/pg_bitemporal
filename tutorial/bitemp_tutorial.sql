@@ -2,7 +2,7 @@ CREATE SCHEMA IF NOT EXISTS bt_tutorial;
 grant usage on schema bitemporal_internal to public;
 
 -- Create Table
-SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
+SELECT * FROM bitemporal_internal.ll_create_period_bitemporal_table(
   'bt_tutorial.staff_bt',
 	$$
     staff_id INT, 
@@ -12,7 +12,7 @@ SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
   'staff_id'
 );
    
-SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
+SELECT * FROM bitemporal_internal.ll_create_period_bitemporal_table(
   'bt_tutorial.cust_bt',
 	$$
     cust_id INT NOT NULL, 
@@ -22,7 +22,7 @@ SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
   'cust_id'
 );
    
-SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
+SELECT * FROM bitemporal_internal.ll_create_period_bitemporal_table(
   'bt_tutorial.product_bt',
 	$$
     product_id INT,
@@ -33,7 +33,7 @@ SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
   'product_id'
 );
    
-SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
+SELECT * FROM bitemporal_internal.ll_create_period_bitemporal_table(
   'bt_tutorial.order_bt',
 	$$
     order_id INT NOT NULL,
@@ -44,7 +44,7 @@ SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
   'order_id'
 );
      
-SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
+SELECT * FROM bitemporal_internal.ll_create_period_bitemporal_table(
   'bt_tutorial.order_line_bt',
 	$$
     order_line_id INT NOT NULL,
@@ -226,3 +226,14 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_delete(
   'cust_id',
   '1'
 );
+
+SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
+  'bt_tutorial.test',
+	$$
+    id INT NOT NULL, 
+	  name TEXT NOT NULL,
+    phone TEXT
+	$$,
+  'id',
+  'event'
+)
