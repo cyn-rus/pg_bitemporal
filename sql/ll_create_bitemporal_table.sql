@@ -16,17 +16,29 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_create_bitemporal_table(
       v_business_key_array TEXT[] := string_to_array(p_business_key, ',');
       i INT;
       temp_table_name TEXT;
+      schema_name TEXT;
     BEGIN
       IF (SELECT p_table LIKE '%.%')
         THEN
+          schema_name := (SELECT split_part(p_table, '.', 1));
           temp_table_name := (SELECT split_part(p_table, '.', 2));
           v_serial_key := temp_table_name || '_key';
           v_pk_constraint_name := temp_table_name || '_pk';
           v_business_key_name := temp_table_name || '_' || translate(p_business_key, ',', '_') || '_assert_eff_excl';
       ELSE
+        schema_name := 'public';
+        temp_table_name := p_table;
         v_serial_key := p_table || '_key';
         v_pk_constraint_name:= p_table || '_pk';
         v_business_key_name := p_table || '_' || translate(p_business_key, ',' , '_') || '_assert_eff_excl';
+      END IF;
+
+      IF (SELECT EXISTS(
+        SELECT FROM pg_tables
+        WHERE schema_name = schema_name AND tablename = temp_table_name
+      )) THEN
+        RAISE NOTICE 'Table % has already exists', p_table;
+        RETURN ('false');
       END IF;
 
       v_serial_key_name := v_serial_key || ' serial';
