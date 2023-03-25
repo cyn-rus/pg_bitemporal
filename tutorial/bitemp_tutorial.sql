@@ -236,4 +236,21 @@ SELECT * FROM bitemporal_internal.ll_create_bitemporal_table(
 	$$,
   'id',
   'event'
-)
+);
+
+CREATE SEQUENCE IF NOT EXISTS bt_tutorial.test_id_seq;
+
+SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
+  'bt_tutorial.test',
+  $$
+    id,
+    name,
+    phone
+  $$,
+  quote_literal(nextval('bt_tutorial.test_id_seq')) ||
+  $$,
+    'a',
+    '123456'
+  $$,
+  now()
+);
