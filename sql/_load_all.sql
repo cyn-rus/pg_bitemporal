@@ -31,6 +31,7 @@ set search_path to bitemporal_internal, public;
 \ir ll_create_bitemporal_table_partitioned.sql
 \ir ll_create_bitemporal_partition.sql
 \ir ll_bitemporal_table_type.sql
+\ir ll_is_data_type_correct.sql
 
 commit;
 

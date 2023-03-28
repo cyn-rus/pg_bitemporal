@@ -37,7 +37,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_create_bitemporal_table(
         SELECT FROM pg_tables
         WHERE schema_name = schema_name AND tablename = temp_table_name
       )) THEN
-        RAISE NOTICE 'Table % has already exists', p_table;
+        RAISE NOTICE 'Table % has already existed', p_table;
         RETURN ('false');
       END IF;
 

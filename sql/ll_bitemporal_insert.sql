@@ -2,25 +2,33 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_insert(
   p_table TEXT,
   p_list_of_fields TEXT,
   p_list_of_values TEXT,
-  p_effective temporal_relationships.timeperiod,
+  p_effective anyelement,
   p_asserted temporal_relationships.timeperiod
 ) RETURNS INTEGER AS
   $BODY$
     DECLARE
       v_rowcount INT;
+      effective_type TEXT;
+      table_type TEXT;
     BEGIN
-      EXECUTE FORMAT(
-        $i$
-          INSERT INTO %s (%s, effective, asserted)
-          VALUES (%s, %L, %L)
-          RETURNING *
-        $i$,
-        p_table,
-        p_list_of_fields,
-        p_list_of_values,
-        p_effective,
-        p_asserted
-      );
+      effective_type := (SELECT pg_typeof(p_effective));
+      table_type := (SELECT * FROM bitemporal_internal.ll_bitemporal_table_type(p_table));
+
+      IF (SELECT * FROM bitemporal_internal.ll_is_data_type_correct(p_table, p_effective))
+        THEN EXECUTE FORMAT(
+          $i$
+            INSERT INTO %s (%s, effective, asserted)
+            VALUES (%s, %L, %L)
+            RETURNING *
+          $i$,
+          p_table,
+          p_list_of_fields,
+          p_list_of_values,
+          p_effective,
+          p_asserted
+        );
+      END IF;
+
       GET DIAGNOSTICS v_rowcount:=ROW_COUNT; 
       RETURN v_rowcount;         
     END;    
@@ -31,74 +39,26 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_insert(
   p_table TEXT,
   p_list_of_fields TEXT,
   p_list_of_values TEXT,
-  p_effective timestamptz,
-  p_asserted temporal_relationships.timeperiod
+  p_effective anyelement
 ) RETURNS INTEGER AS
   $BODY$
     DECLARE
       v_rowcount INT;
     BEGIN
-      EXECUTE FORMAT(
-        $i$
-          INSERT INTO %s (%s, effective, asserted)
-          VALUES (%s, %L, %L)
-          RETURNING *
-        $i$,
-        p_table,
-        p_list_of_fields,
-        p_list_of_values,
-        p_effective,
-        p_asserted
-      );
-      GET DIAGNOSTICS v_rowcount:=ROW_COUNT; 
-      RETURN v_rowcount;         
-    END;    
-  $BODY$
-LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_insert(
-  p_table TEXT,
-  p_list_of_fields TEXT,
-  p_list_of_values TEXT,
-  p_effective temporal_relationships.timeperiod
-) RETURNS INTEGER AS
-  $BODY$
-    BEGIN
-      RETURN (
-        SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
-          p_table,
-          p_list_of_fields,
-          p_list_of_values,
-          p_effective,
-          temporal_relationships.timeperiod(now(), 'infinity')
-        )
-      );
+      IF (SELECT * FROM bitemporal_internal.ll_is_data_type_correct(p_table, p_effective))
+        THEN RETURN (
+          SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
+            p_table,
+            p_list_of_fields,
+            p_list_of_values,
+            p_effective,
+            temporal_relationships.timeperiod(now(), 'infinity')
+          )
+        );
+      END IF;
     END;
   $BODY$
 LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_insert(
-  p_table TEXT,
-  p_list_of_fields TEXT,
-  p_list_of_values TEXT,
-  p_effective timestamptz
-) RETURNS INTEGER AS
-  $BODY$
-    BEGIN
-      RETURN (
-        SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
-          p_table,
-          p_list_of_fields,
-          p_list_of_values,
-          p_effective,
-          temporal_relationships.timeperiod(now(), 'infinity')
-        )
-      );
-    END;
-  $BODY$
-LANGUAGE plpgsql;
-
-
 
 CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_insert(
   p_table TEXT,

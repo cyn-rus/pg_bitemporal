@@ -129,8 +129,7 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert('bt_tutorial.order_line_b
 
 -- Update
 SELECT * FROM bitemporal_internal.ll_bitemporal_update(
-  'bt_tutorial',
-  'staff_bt',
+  'bt_tutorial.staff_bt',
   'staff_location', -- fields to update'
   $$ 'newlocation' $$,  -- values to update with
   'staff_id',  -- search fields
