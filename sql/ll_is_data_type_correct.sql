@@ -6,18 +6,19 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_is_data_type_correct(
     DECLARE
       table_type TEXT := (SELECT * FROM bitemporal_internal.ll_bitemporal_table_type(p_table));
       effective_type TEXT := (SELECT pg_typeof(p_effective));
+      is_correct BOOLEAN := 'false';
     BEGIN
       IF (effective_type = 'temporal_relationships.timeperiod' AND table_type = 'period')
         OR (effective_type = 'timestamp with time zone' AND table_type = 'event')
-          THEN RETURN ('true');
+          THEN is_correct = 'true';
       ELSIF effective_type != 'temporal_relationships.timeperiod' OR effective_type != 'timestamp with time zone'
-        THEN RAISE EXCEPTION 'Effective type is incorrect'
-          USING HINT = 'Type must be temporal_relationships.timeperiod or timestamptz';
+        THEN RAISE NOTICE 'Effective type is incorrect'
+          USING HINT = 'Effective must be temporal_relationships.timeperiod or timestamptz';
       ELSE
-        RAISE EXCEPTION 'Effective type does not match with the table';
+        RAISE NOTICE 'Effective type does not match with the table';
       END IF;
 
-      RETURN ('false');
+      RETURN is_correct;
     END;
   $BODY$
 LANGUAGE plpgsql;

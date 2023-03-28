@@ -7,7 +7,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_insert(
 ) RETURNS INTEGER AS
   $BODY$
     DECLARE
-      v_rowcount INT;
+      v_rowcount INT := 0;
     BEGIN
       IF (SELECT * FROM bitemporal_internal.ll_is_data_type_correct(p_table, p_effective))
         THEN EXECUTE FORMAT(
@@ -22,10 +22,10 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_insert(
           p_effective,
           p_asserted
         );
+        GET DIAGNOSTICS v_rowcount := ROW_COUNT;
       END IF;
 
-      GET DIAGNOSTICS v_rowcount:=ROW_COUNT; 
-      RETURN v_rowcount;         
+      RETURN v_rowcount;
     END;    
   $BODY$
 LANGUAGE plpgsql;
@@ -37,20 +37,16 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_insert(
   p_effective anyelement
 ) RETURNS INTEGER AS
   $BODY$
-    DECLARE
-      v_rowcount INT;
     BEGIN
-      IF (SELECT * FROM bitemporal_internal.ll_is_data_type_correct(p_table, p_effective))
-        THEN RETURN (
-          SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
-            p_table,
-            p_list_of_fields,
-            p_list_of_values,
-            p_effective,
-            temporal_relationships.timeperiod(now(), 'infinity')
-          )
-        );
-      END IF;
+      RETURN (
+        SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
+          p_table,
+          p_list_of_fields,
+          p_list_of_values,
+          p_effective,
+          temporal_relationships.timeperiod(now(), 'infinity')
+        )
+      );
     END;
   $BODY$
 LANGUAGE plpgsql;

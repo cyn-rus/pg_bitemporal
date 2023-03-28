@@ -18,115 +18,115 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_update(
       v_keys INT[];
       v_now timestamptz := now();-- so that we can reference this time
     BEGIN
-    IF lower(p_asserted) < v_now::date --should we allow this precision?...
-      OR upper(p_asserted) < 'infinity'
-        THEN RAISE EXCEPTION 'Asserted interval starts in the past or has a finite end: %', p_asserted; 
-        RETURN v_rowcount;
-    END IF;  
+      IF lower(p_asserted) < v_now::date --should we allow this precision?...
+        OR upper(p_asserted) < 'infinity'
+          THEN RAISE EXCEPTION 'Asserted interval starts in the past or has a finite end: %', p_asserted; 
+          RETURN v_rowcount;
+      END IF;  
 
-    IF (SELECT p_table LIKE '%.%')
-      THEN v_serial_key := (SELECT split_part(p_table, '.', 2) || '_key');
-    ELSE v_serial_key := p_table || '_key';
-    END IF;
+      IF (SELECT p_table LIKE '%.%')
+        THEN v_serial_key := (SELECT split_part(p_table, '.', 2) || '_key');
+      ELSE v_serial_key := p_table || '_key';
+      END IF;
 
-    v_table_attr := bitemporal_internal.ll_bitemporal_list_of_fields(p_table);
-    IF array_length(v_table_attr, 1) = 0
-      THEN RAISE EXCEPTION 'Empty list of fields for a table: %', p_table; 
-        RETURN v_rowcount;
-    END IF;
-    v_list_of_fields_to_insert_excl_effective := ARRAY_TO_STRING(v_table_attr, ',', '');
-    v_list_of_fields_to_insert := v_list_of_fields_to_insert_excl_effective || ',effective';
+      v_table_attr := bitemporal_internal.ll_bitemporal_list_of_fields(p_table);
+      IF array_length(v_table_attr, 1) = 0
+        THEN RAISE EXCEPTION 'Empty list of fields for a table: %', p_table; 
+          RETURN v_rowcount;
+      END IF;
+      v_list_of_fields_to_insert_excl_effective := ARRAY_TO_STRING(v_table_attr, ',', '');
+      v_list_of_fields_to_insert := v_list_of_fields_to_insert_excl_effective || ',effective';
 
---end assertion period for the old record(s)
+  --end assertion period for the old record(s)
 
-    EXECUTE FORMAT(
-      $u$
-        WITH updt AS (
-          UPDATE %s SET asserted = temporal_relationships.timeperiod(LOWER(asserted), LOWER(%L::temporal_relationships.timeperiod))
-          WHERE ( %s )=( %s ) AND
-            (temporal_relationships.is_overlaps(effective, %L)
-              OR temporal_relationships.is_meets(effective::temporal_relationships.timeperiod, %L)
-              OR temporal_relationships.has_finishes(effective::temporal_relationships.timeperiod, %L))
-            AND now() <@ asserted
-          RETURNING %s
-        )
-        SELECT array_agg(%s)
-        FROM updt
-      $u$,
-      p_table,
-      p_asserted,
-      p_search_fields,
-      p_search_values,
-      p_effective,
-      p_effective,
-      p_effective,
-      v_serial_key,
-      v_serial_key
-    ) INTO v_keys_old;
+      EXECUTE FORMAT(
+        $u$
+          WITH updt AS (
+            UPDATE %s SET asserted = temporal_relationships.timeperiod(LOWER(asserted), LOWER(%L::temporal_relationships.timeperiod))
+            WHERE ( %s )=( %s ) AND
+              (temporal_relationships.is_overlaps(effective, %L)
+                OR temporal_relationships.is_meets(effective::temporal_relationships.timeperiod, %L)
+                OR temporal_relationships.has_finishes(effective::temporal_relationships.timeperiod, %L))
+              AND now() <@ asserted
+            RETURNING %s
+          )
+          SELECT array_agg(%s)
+          FROM updt
+        $u$,
+        p_table,
+        p_asserted,
+        p_search_fields,
+        p_search_values,
+        p_effective,
+        p_effective,
+        p_effective,
+        v_serial_key,
+        v_serial_key
+      ) INTO v_keys_old;
 
- --insert new assertion rage with old values and effective-ended
-    EXECUTE FORMAT(
-      $i$
-        INSERT INTO %s ( %s, effective, asserted )
-          SELECT %s, temporal_relationships.timeperiod(LOWER(effective), LOWER(%L::temporal_relationships.timeperiod)), %L
-          FROM %s
-          WHERE ( %s ) in ( %s )
-      $i$,
-      p_table,
-      v_list_of_fields_to_insert_excl_effective,
-      v_list_of_fields_to_insert_excl_effective,
-      p_effective,
-      p_asserted,
-      p_table,
-      v_serial_key,
-      COALESCE(ARRAY_TO_STRING(v_keys_old,','), 'NULL')
-    );
-
----insert new assertion rage with old values and new effective range
-
-    EXECUTE FORMAT(
-      $i$
-        WITH inst AS (
+  --insert new assertion rage with old values and effective-ended
+      EXECUTE FORMAT(
+        $i$
           INSERT INTO %s ( %s, effective, asserted )
-            SELECT %s ,%L, %L
+            SELECT %s, temporal_relationships.timeperiod(LOWER(effective), LOWER(%L::temporal_relationships.timeperiod)), %L
             FROM %s
-            WHERE ( %s ) IN (%s )
-          RETURNING %s
-        )
-        SELECT array_agg(%s)
-        FROM inst
-      $i$,
-      p_table,
-      v_list_of_fields_to_insert_excl_effective,
-      v_list_of_fields_to_insert_excl_effective,
-      p_effective,
-      p_asserted,
-      p_table,
-      v_serial_key,
-      COALESCE(ARRAY_TO_STRING(v_keys_old,','), 'NULL'),
-      v_serial_key,
-      v_serial_key
-    ) INTO v_keys;
+            WHERE ( %s ) in ( %s )
+        $i$,
+        p_table,
+        v_list_of_fields_to_insert_excl_effective,
+        v_list_of_fields_to_insert_excl_effective,
+        p_effective,
+        p_asserted,
+        p_table,
+        v_serial_key,
+        COALESCE(ARRAY_TO_STRING(v_keys_old,','), 'NULL')
+      );
 
---update new record(s) in new assertion rage with new values                                  
-                    
-    EXECUTE FORMAT(
---v_sql :=
-      $u$
-        UPDATE %s SET (%s) =
-          (SELECT %s) 
-          WHERE ( %s ) IN ( %s )
-      $u$,
-      p_table,
-      p_list_of_fields,
-      p_list_of_values,
-      v_serial_key,
-      COALESCE(ARRAY_TO_STRING(v_keys,','), 'NULL')
-    );
+  ---insert new assertion rage with old values and new effective range
 
-    GET DIAGNOSTICS v_rowcount:=ROW_COUNT;  
+      EXECUTE FORMAT(
+        $i$
+          WITH inst AS (
+            INSERT INTO %s ( %s, effective, asserted )
+              SELECT %s ,%L, %L
+              FROM %s
+              WHERE ( %s ) IN (%s )
+            RETURNING %s
+          )
+          SELECT array_agg(%s)
+          FROM inst
+        $i$,
+        p_table,
+        v_list_of_fields_to_insert_excl_effective,
+        v_list_of_fields_to_insert_excl_effective,
+        p_effective,
+        p_asserted,
+        p_table,
+        v_serial_key,
+        COALESCE(ARRAY_TO_STRING(v_keys_old,','), 'NULL'),
+        v_serial_key,
+        v_serial_key
+      ) INTO v_keys;
 
-    RETURN v_rowcount;
+  --update new record(s) in new assertion rage with new values                                  
+                      
+      EXECUTE FORMAT(
+  --v_sql :=
+        $u$
+          UPDATE %s SET (%s) =
+            (SELECT %s) 
+            WHERE ( %s ) IN ( %s )
+        $u$,
+        p_table,
+        p_list_of_fields,
+        p_list_of_values,
+        v_serial_key,
+        COALESCE(ARRAY_TO_STRING(v_keys,','), 'NULL')
+      );
+
+      GET DIAGNOSTICS v_rowcount:=ROW_COUNT;  
+
+      RETURN v_rowcount;
     END;    
   $BODY$
 LANGUAGE plpgsql;
