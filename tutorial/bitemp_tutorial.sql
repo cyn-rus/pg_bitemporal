@@ -131,7 +131,7 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert('bt_tutorial.order_line_b
 SELECT * FROM bitemporal_internal.ll_bitemporal_update(
   'bt_tutorial.staff_bt',
   'staff_location', -- fields to update'
-  $$ 'newlocation' $$,  -- values to update with
+  $$ 'oldlocation' $$,  -- values to update with
   'staff_id',  -- search fields
   '1', --  search values
   temporal_relationships.timeperiod(now(), 'infinity')
@@ -251,5 +251,14 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
     'a',
     '123456'
   $$,
+  now()
+);
+
+SELECT * FROM bitemporal_internal.ll_bitemporal_update(
+ 'bt_tutorial.test',
+  'name', -- fields to update'
+  $$ 'c' $$,  -- values to update with
+  'id',  -- search fields
+  '1', --  search values
   now()
 );
