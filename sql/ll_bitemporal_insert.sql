@@ -8,12 +8,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_insert(
   $BODY$
     DECLARE
       v_rowcount INT;
-      effective_type TEXT;
-      table_type TEXT;
     BEGIN
-      effective_type := (SELECT pg_typeof(p_effective));
-      table_type := (SELECT * FROM bitemporal_internal.ll_bitemporal_table_type(p_table));
-
       IF (SELECT * FROM bitemporal_internal.ll_is_data_type_correct(p_table, p_effective))
         THEN EXECUTE FORMAT(
           $i$
