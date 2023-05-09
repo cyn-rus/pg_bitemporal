@@ -4,7 +4,6 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_correction(
   p_list_of_values TEXT,
   p_search_fields TEXT,
   p_search_values TEXT,
-  p_effective temporal_relationships.timeperiod,
   p_now temporal_relationships.time_endpoint
 ) RETURNS INTEGER AS
   $BODY$
@@ -14,7 +13,6 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_correction(
       v_table_attr TEXT[];
       v_now temporal_relationships.time_endpoint := p_now;-- for compatiability with the previous version
       v_serial_key TEXT;
-      v_effective_start temporal_relationships.time_endpoint := LOWER(p_effective);
       v_keys INT[];
       v_keys_old INT[];
     BEGIN
@@ -35,7 +33,6 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_correction(
           WITH updt AS (
             UPDATE %s SET asserted = temporal_relationships.timeperiod_range(lower(asserted), %L, '[)')
             WHERE ( %s )=( %s )
-              AND %L = LOWER(effective)
               AND UPPER(asserted) = 'infinity' 
               AND LOWER(asserted) < %L
             RETURNING %s
@@ -46,7 +43,6 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_correction(
         v_now,
         p_search_fields,
         p_search_values,
-        v_effective_start,
         v_now,
         v_serial_key,
         v_serial_key
@@ -80,17 +76,15 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_correction(
       IF COALESCE(ARRAY_TO_STRING(v_keys_old, ',')) IS NULL
         THEN EXECUTE FORMAT(
           $uu$
-            UPDATE %s SET ( %s ) = (SELECT %s )
+            UPDATE %s SET ( %s ) = ( SELECT %s )
             WHERE ( %s ) = ( %s )
-              AND effective = %L
               AND UPPER(asserted) = 'infinity'
           $uu$,  --update new assertion rage with new values
           p_table,
           p_list_of_fields,
           p_list_of_values,
           p_search_fields,
-          p_search_values,
-          p_effective
+          p_search_values
         );
       ELSE EXECUTE FORMAT(
       -- v_sql:=   
@@ -104,7 +98,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_correction(
         v_serial_key,
         COALESCE(ARRAY_TO_STRING(v_keys, ','), 'NULL')
       );
-        --  raise notice 'sql%', v_sql; 
+        -- raise notice 'sql%', v_sql; 
       END IF;  
       GET DIAGNOSTICS v_rowcount := ROW_COUNT; 
 
@@ -118,8 +112,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_correction(
   p_list_of_fields TEXT,
   p_list_of_values TEXT,
   p_search_fields TEXT,
-  p_search_values TEXT,
-  p_effective temporal_relationships.timeperiod
+  p_search_values TEXT
 ) RETURNS INTEGER AS
   $BODY$
     BEGIN
@@ -130,7 +123,6 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_correction(
           p_list_of_values,
           p_search_fields,
           p_search_values,
-          p_effective,
           now()
         )
       );
