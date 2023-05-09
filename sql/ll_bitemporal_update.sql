@@ -40,7 +40,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_update(
 
       v_list_of_fields_to_insert := ARRAY_TO_STRING(v_table_attr, ',', '');
 
-      v_keys_old := (SELECT * FROM bitemporal_internal.ll_bitemporal_update(
+      v_keys_old := (SELECT * FROM bitemporal_internal.ll_bitemporal_update_end_assertion(
         p_table,
         p_search_fields,
         p_search_values,
@@ -95,7 +95,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_update(
   $BODY$
 LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_update(
+CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_update_end_assertion(
   p_table TEXT,
   p_search_fields TEXT,  -- search fields
   p_search_values TEXT,  --  search values
@@ -157,7 +157,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_update(
   $BODY$
 LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_update(
+CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_update_end_assertion(
   p_table TEXT,
   p_search_fields TEXT,  -- search fields
   p_search_values TEXT,  --  search values
