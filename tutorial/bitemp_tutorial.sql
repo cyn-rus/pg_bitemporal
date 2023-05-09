@@ -161,11 +161,10 @@ WHERE l.order_id=1
 -- Correction
 SELECT * FROM bitemporal_internal.ll_bitemporal_correction(
   'bt_tutorial.product_bt',
-  'price',
-  '275',
+  $$price, weight$$,
+  $$275, 300$$,
   'product_id',
-  '2',
-  temporal_relationships.timeperiod('2023-03-10 01:26:16.107912+07', 'infinity')
+  '2'
 );
 
 ---corrected price
@@ -261,4 +260,16 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_update(
   'id',  -- search fields
   '1', --  search values
   now()
+);
+
+SELECT * FROM bitemporal_internal.ll_bitemporal_correction_effective(
+  'bt_tutorial.test',
+  'id',
+  '1'
+);
+
+SELECT * FROM bitemporal_internal.ll_bitemporal_correction_effective(
+  'bt_tutorial.staff_bt',
+  'staff_id',
+  '11'
 );
