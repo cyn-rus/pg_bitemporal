@@ -8,7 +8,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_is_data_type_correct(
       effective_type TEXT := (SELECT pg_typeof(p_effective));
       is_correct BOOLEAN := 'false';
     BEGIN
-      IF (effective_type = 'temporal_relationships.timeperiod' AND table_type = 'period')
+      IF (effective_type = 'temporal_relationships.timeperiod' AND table_type = 'interval')
         OR (effective_type = 'timestamp with time zone' AND table_type = 'event')
           THEN is_correct = 'true';
       ELSIF effective_type != 'temporal_relationships.timeperiod' OR effective_type != 'timestamp with time zone'

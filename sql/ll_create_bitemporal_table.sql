@@ -35,7 +35,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_create_bitemporal_table(
 
       IF (SELECT EXISTS(
         SELECT FROM pg_tables
-        WHERE schema_name = schema_name AND tablename = temp_table_name
+        WHERE schemaname = schema_name AND tablename = temp_table_name
       )) THEN
         RAISE NOTICE 'Table % has already existed', p_table;
         RETURN ('false');
@@ -43,7 +43,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_create_bitemporal_table(
 
       v_serial_key_name := v_serial_key || ' serial';
 
-      IF (SELECT effective_data_type LIKE 'period') THEN
+      IF (SELECT effective_data_type LIKE 'interval') THEN
         v_business_key_gist := v_business_key_gist || ' WITH =, asserted WITH &&, effective WITH &&';
         EXECUTE FORMAT(
           $create$
@@ -113,7 +113,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_create_bitemporal_table(
   $BODY$
 LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION bitemporal_internal.ll_create_period_bitemporal_table(
+CREATE OR REPLACE FUNCTION bitemporal_internal.ll_create_interval_bitemporal_table(
   p_table TEXT,
   p_table_definition TEXT,
   p_business_key TEXT
@@ -125,7 +125,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_create_period_bitemporal_table
           p_table,
           p_table_definition,
           p_business_key,
-          'period'
+          'interval'
         )
       );
     END;

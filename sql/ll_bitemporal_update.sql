@@ -21,11 +21,11 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_update(
         THEN RETURN v_rowcount;
       END IF;
 
-      IF LOWER(p_asserted) < v_now::date -- should we allow this precision?...
-        OR UPPER(p_asserted) < 'infinity'
-          THEN RAISE NOTICE 'Asserted interval starts in the future or has a finite end: %', p_asserted;
-          RETURN v_rowcount;
-      END IF;
+      -- IF LOWER(p_asserted) < v_now::date -- should we allow this precision?...
+      --   OR UPPER(p_asserted) < 'infinity'
+      --     THEN RAISE NOTICE 'Asserted interval starts in the future or has a finite end: %', p_asserted;
+      --     RETURN v_rowcount;
+      -- END IF;
 
       IF (SELECT p_table LIKE '%.%')
         THEN v_serial_key := (SELECT split_part(p_table, '.', 2)) || '_key';
@@ -176,8 +176,6 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_update_end_assertio
           WITH updt AS (
             UPDATE %s SET asserted = temporal_relationships.timeperiod(LOWER(asserted), LOWER(%L::temporal_relationships.timeperiod))
             WHERE ( %s )=( %s )
-              AND effective < %L
-              AND now() <@ asserted
             RETURNING %s
           )
           SELECT array_agg(%s)
@@ -187,7 +185,6 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_update_end_assertio
         p_asserted,
         p_search_fields,
         p_search_values,
-        p_effective,
         v_serial_key,
         v_serial_key
       ) INTO v_keys_old;
@@ -237,22 +234,26 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_update(
       table_type TEXT;
     BEGIN
       table_type := (SELECT * FROM bitemporal_internal.ll_bitemporal_table_type(p_table));
-      IF table_type = 'period' THEN
+      IF table_type = 'interval' THEN
         RETURN (
-          SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
+          SELECT * FROM bitemporal_internal.ll_bitemporal_update(
             p_table,
             p_list_of_fields,
             p_list_of_values,
+            p_search_fields,
+            p_search_values,
             temporal_relationships.timeperiod(now(), 'infinity'),
             temporal_relationships.timeperiod(now(), 'infinity')
           )
         );
       ELSE 
         RETURN (
-          SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
+          SELECT * FROM bitemporal_internal.ll_bitemporal_update(
             p_table,
             p_list_of_fields,
             p_list_of_values,
+            p_search_fields,
+            p_search_values,
             now(),
             temporal_relationships.timeperiod(now(), 'infinity')
           )

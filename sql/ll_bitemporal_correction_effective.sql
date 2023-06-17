@@ -3,7 +3,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_correction_effectiv
   p_search_field TEXT,
   p_search_value TEXT,
   p_effective anyelement,
-  p_asserted temporal_relationships.timeperiod
+  p_asserted temporal_relationships.time_endpoint
 ) RETURNS INTEGER AS
   $BODY$
     DECLARE
@@ -33,7 +33,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_correction_effectiv
       EXECUTE FORMAT(
         $i$
           INSERT INTO %s ( %s, effective, asserted )
-            SELECT %s, %L, %L
+            SELECT %s, %L, temporal_relationships.timeperiod_range(%L, 'infinity', '[)]')
             FROM %s
             WHERE %s = %s
             ORDER BY row_created_at DESC
@@ -59,22 +59,19 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_correction_effectiv
   p_table TEXT,
   p_search_field TEXT,
   p_search_value TEXT,
-  p_effective anyelement
+  p_effective timestamptz
 ) RETURNS INTEGER AS
   $BODY$
     BEGIN
-      IF (SELECT * FROM bitemporal_internal.ll_is_data_type_correct(p_table, p_effective))
-        THEN RETURN (
-          SELECT * FROM bitemporal_internal.ll_bitemporal_correction_effective(
-            p_table,
-            p_search_field,
-            p_search_value,
-            p_effective,
-            temporal_relationships.timeperiod(now(), 'infinity')
-          )
-        );
-      ELSE RETURN 0;
-      END IF;
+      RETURN (
+        SELECT * FROM bitemporal_internal.ll_bitemporal_correction_effective(
+          p_table,
+          p_search_field,
+          p_search_value,
+          p_effective,
+          now()
+        )
+      );
     END;
   $BODY$
 LANGUAGE plpgsql;
@@ -90,14 +87,14 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_correction_effectiv
     BEGIN
       table_type := (SELECT * FROM bitemporal_internal.ll_bitemporal_table_type(p_table));
       
-      IF table_type = 'period' THEN
+      IF table_type = 'interval' THEN
         RETURN (
           SELECT * FROM bitemporal_internal.ll_bitemporal_correction_effective(
             p_table,
             p_search_field,
             p_search_value,
             temporal_relationships.timeperiod(now(), 'infinity'),
-            temporal_relationships.timeperiod(now(), 'infinity')
+            now()
           )
         );
       ELSE
@@ -107,7 +104,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_correction_effectiv
             p_search_field,
             p_search_value,
             now(),
-            temporal_relationships.timeperiod(now(), 'infinity')
+            now()
           )
         );
       END IF;

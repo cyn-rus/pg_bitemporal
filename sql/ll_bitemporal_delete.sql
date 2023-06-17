@@ -2,7 +2,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_delete(
   p_table TEXT,
   p_search_fields TEXT,  -- search fields
   p_search_values TEXT,  --  search values
-  p_asserted temporal_relationships.timeperiod -- will be asserted
+  p_asserted timestamptz -- will be asserted
 ) RETURNS INTEGER AS
   $BODY$
     DECLARE
@@ -12,9 +12,9 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_delete(
 
       EXECUTE format(
         $u$
-          UPDATE %s SET asserted = temporal_relationships.timeperiod(LOWER(asserted), LOWER(%L::temporal_relationships.timeperiod))
+          UPDATE %s SET asserted = temporal_relationships.timeperiod(LOWER(asserted), %L::timestamptz)
           WHERE ( %s ) = ( %s )
-            AND LOWER(%L::temporal_relationships.timeperiod) <@ asserted
+            AND %L::timestamptz <@ asserted
         $u$,
         p_table,
         p_asserted,
@@ -41,7 +41,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_delete(
           p_table,
           p_search_fields,
           p_search_values,
-          temporal_relationships.timeperiod(now(), 'infinity')
+          now()
         )
       );
     END;

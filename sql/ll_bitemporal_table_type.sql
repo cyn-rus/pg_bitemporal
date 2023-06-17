@@ -31,7 +31,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_table_type(
       EXECUTE query INTO data_type;
 
       IF (SELECT data_type = 'tstzrange')
-        THEN RETURN('period');
+        THEN RETURN('interval');
       ELSIF (SELECT data_type = 'timestamp with time zone')
         THEN RETURN('event'); 
       ELSE

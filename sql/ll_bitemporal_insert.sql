@@ -61,7 +61,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_insert(
       table_type TEXT;
     BEGIN
       table_type := (SELECT * FROM bitemporal_internal.ll_bitemporal_table_type(p_table));
-      IF table_type = 'period' THEN
+      IF table_type = 'interval' THEN
         RETURN (
           SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
             p_table,
