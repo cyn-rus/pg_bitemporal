@@ -1,0 +1,4 @@
+comment = 'Extension for bitemporal operations'
+default_version = '1.0'
+module_pathname = '$libdir/pg_bitemporal/_load_all'
+relocatable = true
