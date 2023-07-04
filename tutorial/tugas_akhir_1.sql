@@ -2,7 +2,7 @@ DROP SCHEMA tugas_akhir_1 CASCADE;
 
 CREATE SCHEMA IF NOT EXISTS tugas_akhir_1;
 
-SELECT * FROM bitemporal_internal.ll_create_event_bitemporal_table(
+SELECT * FROM ll_create_event_bitemporal_table(
   'tugas_akhir_1.payment',
   $$
     payment_id INT NOT NULL,
@@ -15,7 +15,7 @@ SELECT * FROM bitemporal_internal.ll_create_event_bitemporal_table(
 
 CREATE SEQUENCE IF NOT EXISTS tugas_akhir_1.payment_id_seq;
 
-SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
+SELECT * FROM ll_bitemporal_insert(
   'tugas_akhir_1.payment',
   $$
     payment_id,
@@ -33,7 +33,7 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
   temporal_relationships.timeperiod('2023-06-13 09:00:00.000000+07', 'infinity')
 );
 
-SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
+SELECT * FROM ll_bitemporal_insert(
   'tugas_akhir_1.payment',
   $$
     payment_id,
@@ -51,7 +51,7 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
   temporal_relationships.timeperiod('2023-06-13 11:04:00.000000+07', 'infinity')
 );
 
-SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
+SELECT * FROM ll_bitemporal_insert(
   'tugas_akhir_1.payment',
   $$
     payment_id,
@@ -69,7 +69,7 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
   temporal_relationships.timeperiod('2023-06-13 14:01:00.000000+07', 'infinity')
 );
 
-SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
+SELECT * FROM ll_bitemporal_insert(
   'tugas_akhir_1.payment',
   $$
     payment_id,
@@ -87,7 +87,7 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
   temporal_relationships.timeperiod('2023-06-13 14:55:00.000000+07', 'infinity')
 );
 
-SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
+SELECT * FROM ll_bitemporal_insert(
   'tugas_akhir_1.payment',
   $$
     payment_id,
@@ -105,7 +105,7 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
   temporal_relationships.timeperiod('2023-06-13 17:37:00.000000+07', 'infinity')
 );
 
-SELECT * FROM bitemporal_internal.ll_bitemporal_update(
+SELECT * FROM ll_bitemporal_update(
   'tugas_akhir_1.payment',
   'buyer_username',
   $$ 'bukan_budi' $$,
@@ -115,7 +115,7 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_update(
   temporal_relationships.timeperiod('2023-06-13 20:02:00.000000+07', 'infinity')
 );
 
-SELECT * FROM bitemporal_internal.ll_bitemporal_correction(
+SELECT * FROM ll_bitemporal_correction(
   'tugas_akhir_1.payment',
   'price',
   $$ 410000 $$,
@@ -124,14 +124,14 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_correction(
   timestamptz('2023-06-13 20:39:00.000000+07')
 );
 
-SELECT * FROM bitemporal_internal.ll_bitemporal_delete(
+SELECT * FROM ll_bitemporal_delete(
   'tugas_akhir_1.payment',
   'payment_id',
   '3',
   timestamptz('2023-06-13 21:33:00.000000+07')
 );
 
-SELECT * FROM bitemporal_internal.ll_bitemporal_correction_effective(
+SELECT * FROM ll_bitemporal_correction_effective(
   'tugas_akhir_1.payment',
   'payment_id',
   '5',

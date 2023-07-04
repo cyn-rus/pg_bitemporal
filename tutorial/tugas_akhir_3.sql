@@ -14,7 +14,7 @@ CREATE TABLE tugas_akhir_3.employee(
   FOREIGN KEY (department) REFERENCES tugas_akhir_3.departments(id)
 );
 
-SELECT * FROM bitemporal_internal.ll_create_interval_bitemporal_table(
+SELECT * FROM ll_create_interval_bitemporal_table(
   'tugas_akhir_3.contract',
   $$
     id INT NOT NULL,
@@ -25,7 +25,7 @@ SELECT * FROM bitemporal_internal.ll_create_interval_bitemporal_table(
   'id'
 );
 
-SELECT * FROM bitemporal_internal.ll_create_event_bitemporal_table(
+SELECT * FROM ll_create_event_bitemporal_table(
   'tugas_akhir_3.events',
   $$
     id INT NOT NULL,
@@ -58,7 +58,7 @@ VALUES
   ('Michael Brown', (SELECT id FROM tugas_akhir_3.departments WHERE dept_name='IT') );
 
 -- 1
-SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
+SELECT * FROM ll_bitemporal_insert(
   'tugas_akhir_3.contract',
   $$
     id,
@@ -70,12 +70,12 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
     'John Doe',
     5000000
   $$,
-  temporal_relationships.timeperiod('2023-01-01', 'infinity'),
-  temporal_relationships.timeperiod('2023-01-01', 'infinity')
+  timeperiod('2023-01-01', 'infinity'),
+  timeperiod('2023-01-01', 'infinity')
 );
 
 -- 2
-SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
+SELECT * FROM ll_bitemporal_insert(
   'tugas_akhir_3.contract',
   $$
     id,
@@ -87,12 +87,12 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
     'Jane Smith',
     5400000
   $$,
-  temporal_relationships.timeperiod('2023-02-01', 'infinity'),
-  temporal_relationships.timeperiod('2023-02-01', 'infinity')
+  timeperiod('2023-02-01', 'infinity'),
+  timeperiod('2023-02-01', 'infinity')
 );
 
 -- 3
-SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
+SELECT * FROM ll_bitemporal_insert(
   'tugas_akhir_3.contract',
   $$
     id,
@@ -104,12 +104,12 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
     'David Lee',
     5200000
   $$,
-  temporal_relationships.timeperiod('2023-03-15', 'infinity'),
-  temporal_relationships.timeperiod('2023-03-15', 'infinity')
+  timeperiod('2023-03-15', 'infinity'),
+  timeperiod('2023-03-15', 'infinity')
 );
 
 -- 4
-SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
+SELECT * FROM ll_bitemporal_insert(
   'tugas_akhir_3.contract',
   $$
     id,
@@ -121,12 +121,12 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
     'Sarah Johnson',
     6000000
   $$,
-  temporal_relationships.timeperiod('2023-04-01', 'infinity'),
-  temporal_relationships.timeperiod('2023-04-01', 'infinity')
+  timeperiod('2023-04-01', 'infinity'),
+  timeperiod('2023-04-01', 'infinity')
 );
 
 -- 5
-SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
+SELECT * FROM ll_bitemporal_insert(
   'tugas_akhir_3.contract',
   $$
     id,
@@ -138,12 +138,12 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
     'Michael Brown',
     6100000
   $$,
-  temporal_relationships.timeperiod('2023-06-01', 'infinity'),
-  temporal_relationships.timeperiod('2023-06-01', 'infinity')
+  timeperiod('2023-06-01', 'infinity'),
+  timeperiod('2023-06-01', 'infinity')
 );
 
 -- 1
-SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
+SELECT * FROM ll_bitemporal_insert(
   'tugas_akhir_3.events',
   $$
     id,
@@ -158,11 +158,11 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
   $$ ||
   quote_literal((SELECT id FROM tugas_akhir_3.departments WHERE dept_name = 'Sales')),
   timestamptz('2023-06-08 10:30'),
-  temporal_relationships.timeperiod('2023-06-08 10:30', 'infinity')
+  timeperiod('2023-06-08 10:30', 'infinity')
 );
 
 -- 2
-SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
+SELECT * FROM ll_bitemporal_insert(
   'tugas_akhir_3.events',
   $$
     id,
@@ -177,11 +177,11 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
   $$ ||
   quote_literal((SELECT id FROM tugas_akhir_3.departments WHERE dept_name = 'Marketing')),
   timestamptz('2023-06-10 10:00'),
-  temporal_relationships.timeperiod('2023-06-10 10:00', 'infinity')
+  timeperiod('2023-06-10 10:00', 'infinity')
 );
 
 -- 3
-SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
+SELECT * FROM ll_bitemporal_insert(
   'tugas_akhir_3.events',
   $$
     id,
@@ -196,11 +196,11 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
   $$ ||
   quote_literal((SELECT id FROM tugas_akhir_3.departments WHERE dept_name = 'Finance')),
   timestamptz('2023-06-02 15:33'),
-  temporal_relationships.timeperiod('2023-06-02 15:33', 'infinity')
+  timeperiod('2023-06-02 15:33', 'infinity')
 );
 
 -- 4
-SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
+SELECT * FROM ll_bitemporal_insert(
   'tugas_akhir_3.events',
   $$
     id,
@@ -215,11 +215,11 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
   $$ ||
   quote_literal((SELECT id FROM tugas_akhir_3.departments WHERE dept_name = 'Human Resources')),
   timestamptz('2023-06-14 17:12'),
-  temporal_relationships.timeperiod('2023-06-14 17:12', 'infinity')
+  timeperiod('2023-06-14 17:12', 'infinity')
 );
 
 -- 5
-SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
+SELECT * FROM ll_bitemporal_insert(
   'tugas_akhir_3.events',
   $$
     id,
@@ -234,11 +234,11 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
   $$ ||
   quote_literal((SELECT id FROM tugas_akhir_3.departments WHERE dept_name = 'Marketing')),
   timestamptz('2023-06-14 17:39'),
-  temporal_relationships.timeperiod('2023-06-14 17:39', 'infinity')
+  timeperiod('2023-06-14 17:39', 'infinity')
 );
 
 -- 6
-SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
+SELECT * FROM ll_bitemporal_insert(
   'tugas_akhir_3.events',
   $$
     id,
@@ -253,11 +253,11 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
   $$ ||
   quote_literal((SELECT id FROM tugas_akhir_3.departments WHERE dept_name = 'Marketing')),
   timestamptz('2023-06-21 16:27'),
-  temporal_relationships.timeperiod('2023-06-21 16:27', 'infinity')
+  timeperiod('2023-06-21 16:27', 'infinity')
 );
 
 -- 7
-SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
+SELECT * FROM ll_bitemporal_insert(
   'tugas_akhir_3.events',
   $$
     id,
@@ -272,11 +272,11 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
   $$ ||
   quote_literal((SELECT id FROM tugas_akhir_3.departments WHERE dept_name = 'IT')),
   timestamptz('2023-06-25 13:53'),
-  temporal_relationships.timeperiod('2023-06-25 13:53', 'infinity')
+  timeperiod('2023-06-25 13:53', 'infinity')
 );
 
 -- 8
-SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
+SELECT * FROM ll_bitemporal_insert(
   'tugas_akhir_3.events',
   $$
     id,
@@ -291,11 +291,11 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
   $$ ||
   quote_literal((SELECT id FROM tugas_akhir_3.departments WHERE dept_name = 'Human Resources')),
   timestamptz('2023-06-30 10:22'),
-  temporal_relationships.timeperiod('2023-06-30 10:22', 'infinity')
+  timeperiod('2023-06-30 10:22', 'infinity')
 );
 
 -- 9
-SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
+SELECT * FROM ll_bitemporal_insert(
   'tugas_akhir_3.events',
   $$
     id,
@@ -310,11 +310,11 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
   $$ ||
   quote_literal((SELECT id FROM tugas_akhir_3.departments WHERE dept_name = 'IT')),
   timestamptz('2023-06-29 14:41'),
-  temporal_relationships.timeperiod('2023-06-29 14:41', 'infinity')
+  timeperiod('2023-06-29 14:41', 'infinity')
 );
 
 -- 10
-SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
+SELECT * FROM ll_bitemporal_insert(
   'tugas_akhir_3.events',
   $$
     id,
@@ -329,31 +329,31 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
   $$ ||
   quote_literal((SELECT id FROM tugas_akhir_3.departments WHERE dept_name = 'Human Resources')),
   timestamptz('2023-06-02 10:38'),
-  temporal_relationships.timeperiod('2023-06-02 10:38', 'infinity')
+  timeperiod('2023-06-02 10:38', 'infinity')
 );
 
 -- Update
-SELECT * FROM bitemporal_internal.ll_bitemporal_update(
+SELECT * FROM ll_bitemporal_update(
   'tugas_akhir_3.events',
   'location',
   $$ 'Aula Timur' $$,
   'type',
   $$ 'Hackathon' $$,
   timestamptz('2023-07-01 09:11'),
-  temporal_relationships.timeperiod('2023-07-02 09:00', 'infinity')
+  timeperiod('2023-07-02 09:00', 'infinity')
 );
 
-SELECT * FROM bitemporal_internal.ll_bitemporal_update(
+SELECT * FROM ll_bitemporal_update(
   'tugas_akhir_3.contract',
   'salary',
   $$ 6000000 $$,
   'name',
   $$ 'John Doe' $$,
-  temporal_relationships.timeperiod('2023-07-03 17:49', 'infinity'),
-  temporal_relationships.timeperiod('2023-07-03 17:49', 'infinity')
+  timeperiod('2023-07-03 17:49', 'infinity'),
+  timeperiod('2023-07-03 17:49', 'infinity')
 );
 
-SELECT * FROM bitemporal_internal.ll_bitemporal_update(
+SELECT * FROM ll_bitemporal_update(
   'tugas_akhir_3.events',
   $$
     type,
@@ -368,7 +368,7 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_update(
 );
 
 -- Correction
-SELECT * FROM bitemporal_internal.ll_bitemporal_correction(
+SELECT * FROM ll_bitemporal_correction(
   'tugas_akhir_3.events',
   'location',
   $$ 'Google Meet' $$,
@@ -377,7 +377,7 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_correction(
   timestamptz('2023-07-01 16:39')
 );
 
-SELECT * FROM bitemporal_internal.ll_bitemporal_correction(
+SELECT * FROM ll_bitemporal_correction(
   'tugas_akhir_3.contract',
   'salary',
   $$ 5500000 $$,
@@ -386,23 +386,23 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_correction(
 );
 
 -- Inactivate
-SELECT * FROM bitemporal_internal.ll_bitemporal_inactivate(
+SELECT * FROM ll_bitemporal_inactivate(
   'tugas_akhir_3.contract',
   'name',
   $$ 'David Lee' $$,
-  temporal_relationships.timeperiod('2023-09-01', 'infinity'),
-  temporal_relationships.timeperiod('2023-08-01', 'infinity')
+  timeperiod('2023-09-01', 'infinity'),
+  timeperiod('2023-08-01', 'infinity')
 );
 
 -- Delete
-SELECT * FROM bitemporal_internal.ll_bitemporal_delete(
+SELECT * FROM ll_bitemporal_delete(
   'tugas_akhir_3.events',
   'type',
   $$ 'Meeting 2' $$,
   timestamptz('2023-09-01')
 );
 
-SELECT * FROM bitemporal_internal.ll_bitemporal_delete(
+SELECT * FROM ll_bitemporal_delete(
   'tugas_akhir_3.contract',
   'name',
   $$ 'Jane Smith' $$,
@@ -410,17 +410,17 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_delete(
 );
 
 -- Valid Correction
-SELECT * FROM bitemporal_internal.ll_bitemporal_correction_effective(
+SELECT * FROM ll_bitemporal_correction_effective(
   'tugas_akhir_3.events',
   'type',
   $$ 'Meeting 1' $$,
   timestamptz('2023-06-08 10:00'),
-  temporal_relationships.timeperiod('2023-06-22 15:27', 'infinity')
+  time_endpoint('2023-06-22 15:27')
 );
 
-SELECT * FROM bitemporal_internal.ll_bitemporal_correction_effective(
+SELECT * FROM ll_bitemporal_correction_effective(
   'tugas_akhir_3.contract',
   'name',
   $$ 'Sarah Johnson' $$,
-  temporal_relationships.timeperiod('2023-05-01', 'infinity')
+  timeperiod('2023-05-01', 'infinity')
 );

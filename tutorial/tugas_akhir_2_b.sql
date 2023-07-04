@@ -1,6 +1,8 @@
+DROP SCHEMA tugas_akhir_2_b CASCADE;
+
 CREATE SCHEMA IF NOT EXISTS tugas_akhir_2_b;
 
-SELECT * FROM bitemporal_internal.ll_create_interval_bitemporal_table(
+SELECT * FROM ll_create_interval_bitemporal_table(
   'tugas_akhir_2_b.staff',
   $$
     staff_id INT NOT NULL,
@@ -12,7 +14,7 @@ SELECT * FROM bitemporal_internal.ll_create_interval_bitemporal_table(
 
 CREATE SEQUENCE IF NOT EXISTS tugas_akhir_2_b.staff_id_seq;
 
-SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
+SELECT * FROM ll_bitemporal_insert(
   'tugas_akhir_2_b.staff',
   $$
     staff_id,
@@ -26,7 +28,7 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
   $$
 );
 
-SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
+SELECT * FROM ll_bitemporal_insert(
   'tugas_akhir_2_b.staff',
   $$
     staff_id,
@@ -40,7 +42,7 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
   $$
 );
 
-SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
+SELECT * FROM ll_bitemporal_insert(
   'tugas_akhir_2_b.staff',
   $$
     staff_id,
@@ -54,7 +56,7 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_insert(
   $$
 );
 
-SELECT * FROM bitemporal_internal.ll_bitemporal_update(
+SELECT * FROM ll_bitemporal_update(
   'tugas_akhir_2_b.staff',
   'staff_location',
   $$ 'Jl. Tamansari No.64' $$,
@@ -62,7 +64,7 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_update(
   $$ 'Adi' $$
 );
 
-SELECT * FROM bitemporal_internal.ll_bitemporal_correction(
+SELECT * FROM ll_bitemporal_correction(
   'tugas_akhir_2_b.staff',
   'staff_location',
   $$ 'Jl. Ganesa No.7' $$,
@@ -70,19 +72,19 @@ SELECT * FROM bitemporal_internal.ll_bitemporal_correction(
   $$ 'Budi' $$
 );
 
-SELECT * FROM bitemporal_internal.ll_bitemporal_inactivate(
+SELECT * FROM ll_bitemporal_inactivate(
   'tugas_akhir_2_b.staff',
   'staff_name',
   $$ 'Caca' $$
 );
 
-SELECT * FROM bitemporal_internal.ll_bitemporal_delete(
+SELECT * FROM ll_bitemporal_delete(
   'tugas_akhir_2_b.staff',
   'staff_name',
   $$ 'Adi' $$
 );
 
-SELECT * FROM bitemporal_internal.ll_bitemporal_correction_effective(
+SELECT * FROM ll_bitemporal_correction_effective(
   'tugas_akhir_2_b.staff',
   'staff_name',
   $$ 'Budi' $$
