@@ -59,19 +59,22 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_correction_effectiv
   p_table TEXT,
   p_search_field TEXT,
   p_search_value TEXT,
-  p_effective timestamptz
+  p_effective anyelement
 ) RETURNS INTEGER AS
   $BODY$
     BEGIN
-      RETURN (
-        SELECT * FROM bitemporal_internal.ll_bitemporal_correction_effective(
-          p_table,
-          p_search_field,
-          p_search_value,
-          p_effective,
-          now()
-        )
-      );
+      IF (SELECT * FROM bitemporal_internal.ll_is_data_type_correct(p_table, p_effective))
+        THEN RETURN (
+          SELECT * FROM bitemporal_internal.ll_bitemporal_correction_effective(
+            p_table,
+            p_search_field,
+            p_search_value,
+            p_effective,
+            now()
+          )
+        );
+      ELSE RETURN 0;
+      END IF;
     END;
   $BODY$
 LANGUAGE plpgsql;
