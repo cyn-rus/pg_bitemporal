@@ -14,7 +14,7 @@ CREATE TABLE tugas_akhir_3.employee(
   FOREIGN KEY (department) REFERENCES tugas_akhir_3.departments(id)
 );
 
-SELECT * FROM ll_create_interval_bitemporal_table(
+SELECT * FROM create_interval_bitemporal_table(
   'tugas_akhir_3.contract',
   $$
     id INT NOT NULL,
@@ -25,7 +25,7 @@ SELECT * FROM ll_create_interval_bitemporal_table(
   'id'
 );
 
-SELECT * FROM ll_create_event_bitemporal_table(
+SELECT * FROM create_event_bitemporal_table(
   'tugas_akhir_3.events',
   $$
     id INT NOT NULL,
@@ -58,7 +58,7 @@ VALUES
   ('Michael Brown', (SELECT id FROM tugas_akhir_3.departments WHERE dept_name='IT') );
 
 -- 1
-SELECT * FROM ll_bitemporal_insert(
+SELECT * FROM bitemporal_insert(
   'tugas_akhir_3.contract',
   $$
     id,
@@ -75,7 +75,7 @@ SELECT * FROM ll_bitemporal_insert(
 );
 
 -- 2
-SELECT * FROM ll_bitemporal_insert(
+SELECT * FROM bitemporal_insert(
   'tugas_akhir_3.contract',
   $$
     id,
@@ -92,7 +92,7 @@ SELECT * FROM ll_bitemporal_insert(
 );
 
 -- 3
-SELECT * FROM ll_bitemporal_insert(
+SELECT * FROM bitemporal_insert(
   'tugas_akhir_3.contract',
   $$
     id,
@@ -109,7 +109,7 @@ SELECT * FROM ll_bitemporal_insert(
 );
 
 -- 4
-SELECT * FROM ll_bitemporal_insert(
+SELECT * FROM bitemporal_insert(
   'tugas_akhir_3.contract',
   $$
     id,
@@ -126,7 +126,7 @@ SELECT * FROM ll_bitemporal_insert(
 );
 
 -- 5
-SELECT * FROM ll_bitemporal_insert(
+SELECT * FROM bitemporal_insert(
   'tugas_akhir_3.contract',
   $$
     id,
@@ -143,7 +143,7 @@ SELECT * FROM ll_bitemporal_insert(
 );
 
 -- 1
-SELECT * FROM ll_bitemporal_insert(
+SELECT * FROM bitemporal_insert(
   'tugas_akhir_3.events',
   $$
     id,
@@ -162,7 +162,7 @@ SELECT * FROM ll_bitemporal_insert(
 );
 
 -- 2
-SELECT * FROM ll_bitemporal_insert(
+SELECT * FROM bitemporal_insert(
   'tugas_akhir_3.events',
   $$
     id,
@@ -181,7 +181,7 @@ SELECT * FROM ll_bitemporal_insert(
 );
 
 -- 3
-SELECT * FROM ll_bitemporal_insert(
+SELECT * FROM bitemporal_insert(
   'tugas_akhir_3.events',
   $$
     id,
@@ -200,7 +200,7 @@ SELECT * FROM ll_bitemporal_insert(
 );
 
 -- 4
-SELECT * FROM ll_bitemporal_insert(
+SELECT * FROM bitemporal_insert(
   'tugas_akhir_3.events',
   $$
     id,
@@ -219,7 +219,7 @@ SELECT * FROM ll_bitemporal_insert(
 );
 
 -- 5
-SELECT * FROM ll_bitemporal_insert(
+SELECT * FROM bitemporal_insert(
   'tugas_akhir_3.events',
   $$
     id,
@@ -238,7 +238,7 @@ SELECT * FROM ll_bitemporal_insert(
 );
 
 -- 6
-SELECT * FROM ll_bitemporal_insert(
+SELECT * FROM bitemporal_insert(
   'tugas_akhir_3.events',
   $$
     id,
@@ -257,7 +257,7 @@ SELECT * FROM ll_bitemporal_insert(
 );
 
 -- 7
-SELECT * FROM ll_bitemporal_insert(
+SELECT * FROM bitemporal_insert(
   'tugas_akhir_3.events',
   $$
     id,
@@ -276,7 +276,7 @@ SELECT * FROM ll_bitemporal_insert(
 );
 
 -- 8
-SELECT * FROM ll_bitemporal_insert(
+SELECT * FROM bitemporal_insert(
   'tugas_akhir_3.events',
   $$
     id,
@@ -295,7 +295,7 @@ SELECT * FROM ll_bitemporal_insert(
 );
 
 -- 9
-SELECT * FROM ll_bitemporal_insert(
+SELECT * FROM bitemporal_insert(
   'tugas_akhir_3.events',
   $$
     id,
@@ -314,7 +314,7 @@ SELECT * FROM ll_bitemporal_insert(
 );
 
 -- 10
-SELECT * FROM ll_bitemporal_insert(
+SELECT * FROM bitemporal_insert(
   'tugas_akhir_3.events',
   $$
     id,
@@ -333,7 +333,7 @@ SELECT * FROM ll_bitemporal_insert(
 );
 
 -- Update
-SELECT * FROM ll_bitemporal_update(
+SELECT * FROM bitemporal_update(
   'tugas_akhir_3.events',
   'location',
   $$ 'Aula Timur' $$,
@@ -343,7 +343,7 @@ SELECT * FROM ll_bitemporal_update(
   timeperiod('2023-07-02 09:00', 'infinity')
 );
 
-SELECT * FROM ll_bitemporal_update(
+SELECT * FROM bitemporal_update(
   'tugas_akhir_3.contract',
   'salary',
   $$ 6000000 $$,
@@ -353,7 +353,7 @@ SELECT * FROM ll_bitemporal_update(
   timeperiod('2023-07-03 17:49', 'infinity')
 );
 
-SELECT * FROM ll_bitemporal_update(
+SELECT * FROM bitemporal_update(
   'tugas_akhir_3.events',
   $$
     type,
@@ -368,7 +368,7 @@ SELECT * FROM ll_bitemporal_update(
 );
 
 -- Correction
-SELECT * FROM ll_bitemporal_correction(
+SELECT * FROM bitemporal_correction(
   'tugas_akhir_3.events',
   'location',
   $$ 'Google Meet' $$,
@@ -377,7 +377,7 @@ SELECT * FROM ll_bitemporal_correction(
   timestamptz('2023-07-01 16:39')
 );
 
-SELECT * FROM ll_bitemporal_correction(
+SELECT * FROM bitemporal_correction(
   'tugas_akhir_3.contract',
   'salary',
   $$ 5500000 $$,
@@ -386,7 +386,7 @@ SELECT * FROM ll_bitemporal_correction(
 );
 
 -- Inactivate
-SELECT * FROM ll_bitemporal_inactivate(
+SELECT * FROM bitemporal_inactivate(
   'tugas_akhir_3.contract',
   'name',
   $$ 'David Lee' $$,
@@ -395,14 +395,14 @@ SELECT * FROM ll_bitemporal_inactivate(
 );
 
 -- Delete
-SELECT * FROM ll_bitemporal_delete(
+SELECT * FROM bitemporal_delete(
   'tugas_akhir_3.events',
   'type',
   $$ 'Meeting 2' $$,
   timestamptz('2023-09-01')
 );
 
-SELECT * FROM ll_bitemporal_delete(
+SELECT * FROM bitemporal_delete(
   'tugas_akhir_3.contract',
   'name',
   $$ 'Jane Smith' $$,
@@ -410,7 +410,7 @@ SELECT * FROM ll_bitemporal_delete(
 );
 
 -- Valid Correction
-SELECT * FROM ll_bitemporal_correction_effective(
+SELECT * FROM bitemporal_correction_effective(
   'tugas_akhir_3.events',
   'type',
   $$ 'Meeting 1' $$,
@@ -418,7 +418,7 @@ SELECT * FROM ll_bitemporal_correction_effective(
   time_endpoint('2023-06-22 15:27')
 );
 
-SELECT * FROM ll_bitemporal_correction_effective(
+SELECT * FROM bitemporal_correction_effective(
   'tugas_akhir_3.contract',
   'name',
   $$ 'Sarah Johnson' $$,

@@ -84,8 +84,24 @@ SELECT * FROM ll_bitemporal_delete(
   $$ 'Adi' $$
 );
 
-SELECT * FROM ll_bitemporal_correction_effective(
+SELECT * FROM ll_bitemporal_correction_valid(
   'tugas_akhir_2_b.staff',
   'staff_name',
   $$ 'Budi' $$
-)
+);
+
+SELECT * FROM ll_bitemporal_insert(
+  'tugas_akhir_2_b.staff',
+  $$
+    staff_id,
+    staff_name,
+    staff_location
+  $$,
+  $$
+    1,
+    'Tes',
+    'Tes'
+  $$,
+  timeperiod(now(), 'infinity'),
+  timeperiod('2023-07-09 13:16:51.256354+07', 'infinity')
+);

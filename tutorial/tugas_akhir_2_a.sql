@@ -2,7 +2,7 @@ DROP SCHEMA tugas_akhir_2_a CASCADE;
 
 CREATE SCHEMA IF NOT EXISTS tugas_akhir_2_a;
 
-SELECT * FROM ll_create_event_bitemporal_table(
+SELECT * FROM create_event_bitemporal_table(
   'tugas_akhir_2_a.payment',
   $$
     payment_id INT NOT NULL,
@@ -15,7 +15,7 @@ SELECT * FROM ll_create_event_bitemporal_table(
 
 CREATE SEQUENCE IF NOT EXISTS tugas_akhir_2_a.payment_id_seq;
 
-SELECT * FROM ll_bitemporal_insert(
+SELECT * FROM bitemporal_insert(
   'tugas_akhir_2_a.payment',
   $$
     payment_id,
@@ -31,7 +31,7 @@ SELECT * FROM ll_bitemporal_insert(
   $$
 );
 
-SELECT * FROM ll_bitemporal_insert(
+SELECT * FROM bitemporal_insert(
   'tugas_akhir_2_a.payment',
   $$
     payment_id,
@@ -47,7 +47,7 @@ SELECT * FROM ll_bitemporal_insert(
   $$
 );
 
-SELECT * FROM ll_bitemporal_insert(
+SELECT * FROM bitemporal_insert(
   'tugas_akhir_2_a.payment',
   $$
     payment_id,
@@ -63,7 +63,7 @@ SELECT * FROM ll_bitemporal_insert(
   $$
 );
 
-SELECT * FROM ll_bitemporal_insert(
+SELECT * FROM bitemporal_insert(
   'tugas_akhir_2_a.payment',
   $$
     payment_id,
@@ -79,7 +79,7 @@ SELECT * FROM ll_bitemporal_insert(
   $$
 );
 
-SELECT * FROM ll_bitemporal_insert(
+SELECT * FROM bitemporal_insert(
   'tugas_akhir_2_a.payment',
   $$
     payment_id,
@@ -95,7 +95,7 @@ SELECT * FROM ll_bitemporal_insert(
   $$
 );
 
-SELECT * FROM ll_bitemporal_update(
+SELECT * FROM bitemporal_update(
   'tugas_akhir_2_a.payment',
   'buyer_username',
   $$ 'bukan_budi' $$,
@@ -104,7 +104,7 @@ SELECT * FROM ll_bitemporal_update(
   timestamptz('2023-06-13 23:30:13.002769+07')
 );
 
-SELECT * FROM ll_bitemporal_correction(
+SELECT * FROM bitemporal_correction(
   'tugas_akhir_2_a.payment',
   'price',
   $$ 410000 $$,
@@ -112,13 +112,13 @@ SELECT * FROM ll_bitemporal_correction(
   $$ '4' $$
 );
 
-SELECT * FROM ll_bitemporal_delete(
+SELECT * FROM bitemporal_delete(
   'tugas_akhir_2_a.payment',
   'payment_id',
   '3'
 );
 
-SELECT * FROM ll_bitemporal_correction_effective(
+SELECT * FROM bitemporal_correction_effective(
   'tugas_akhir_2_a.payment',
   'payment_id',
   '5'
