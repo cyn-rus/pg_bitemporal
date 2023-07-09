@@ -387,7 +387,7 @@ $f$
     )
   ), (
     FORMAT(
-      'CONSTRAINT %I EXCLUDE USING gist (%I WITH =, asserted WITH &&, effective WITH &&)',
+      'CONSTRAINT %I EXCLUDE USING gist (%I WITH =, asserted WITH &&, valid WITH &&)',
       mk_conname('unique', src_column, '', ''),
       src_column
     )::text
@@ -549,11 +549,11 @@ consrc
 
 -- vim: set filetype=pgsql expandtab tabstop=2 shiftwidth=2:
 
-CREATE OR REPLACE FUNCTION ll_create_bitemporal_table(
+CREATE OR REPLACE FUNCTION create_bitemporal_table(
   p_table TEXT,
   p_table_definition TEXT,
   p_business_key TEXT,
-  effective_data_type TEXT
+  valid_data_type TEXT
 ) RETURNS boolean AS
   $BODY$
     DECLARE
@@ -568,6 +568,7 @@ CREATE OR REPLACE FUNCTION ll_create_bitemporal_table(
       i INT;
       temp_table_name TEXT;
       schema_name TEXT;
+      trigger_func_name TEXT;
     BEGIN
       IF (SELECT p_table LIKE '%.%')
         THEN
@@ -575,13 +576,15 @@ CREATE OR REPLACE FUNCTION ll_create_bitemporal_table(
           temp_table_name := (SELECT split_part(p_table, '.', 2));
           v_serial_key := temp_table_name || '_key';
           v_pk_constraint_name := temp_table_name || '_pk';
-          v_business_key_name := temp_table_name || '_' || translate(p_business_key, ',', '_') || '_assert_eff_excl';
+          v_business_key_name := temp_table_name || '_' || translate(p_business_key, ',', '_') || '_assert_valid_excl';
+          trigger_func_name := schema_name || '_' || temp_table_name || '_id_fk_validate';
       ELSE
         schema_name := 'public';
         temp_table_name := p_table;
         v_serial_key := p_table || '_key';
         v_pk_constraint_name:= p_table || '_pk';
-        v_business_key_name := p_table || '_' || translate(p_business_key, ',' , '_') || '_assert_eff_excl';
+        v_business_key_name := p_table || '_' || translate(p_business_key, ',' , '_') || '_assert_valid_excl';
+        trigger_func_name := p_table || '_' || 'id_fk_validate';
       END IF;
 
       IF (SELECT EXISTS(
@@ -594,14 +597,14 @@ CREATE OR REPLACE FUNCTION ll_create_bitemporal_table(
 
       v_serial_key_name := v_serial_key || ' serial';
 
-      IF (SELECT effective_data_type LIKE 'interval') THEN
-        v_business_key_gist := v_business_key_gist || ' WITH =, asserted WITH &&, effective WITH &&';
+      IF (SELECT valid_data_type LIKE 'interval') THEN
+        v_business_key_gist := v_business_key_gist || ' WITH =, asserted WITH &&, valid WITH &&';
         EXECUTE FORMAT(
           $create$
             CREATE TABLE %s (
               %s,
               %s,
-              effective timeperiod NOT NULL,
+              valid timeperiod NOT NULL,
               asserted timeperiod NOT NULL,
               row_created_at timestamptz NOT NULL DEFAULT now(),
               CONSTRAINT %s PRIMARY KEY (%s),
@@ -616,14 +619,14 @@ CREATE OR REPLACE FUNCTION ll_create_bitemporal_table(
           v_business_key_name,
           v_business_key_gist
         );
-      ELSIF (SELECT effective_data_type LIKE 'event') THEN
+      ELSIF (SELECT valid_data_type LIKE 'event') THEN
         v_business_key_gist := v_business_key_gist || ' WITH =, asserted WITH &&';
         EXECUTE FORMAT(
           $create$
             CREATE TABLE %s (
               %s,
               %s,
-              effective timestamptz NOT NULL,
+              valid timestamptz NOT NULL,
               asserted timeperiod NOT NULL,
               row_created_at timestamptz NOT NULL DEFAULT now(),
               CONSTRAINT %s PRIMARY KEY (%s),
@@ -639,7 +642,7 @@ CREATE OR REPLACE FUNCTION ll_create_bitemporal_table(
           v_business_key_gist
         );
       ELSE
-        RAISE EXCEPTION 'Effective data type should be either "event" or "period"';
+        RAISE EXCEPTION 'Valid data type should be either "event" or "interval"';
         RETURN('false');
       END IF;
 
@@ -664,7 +667,7 @@ CREATE OR REPLACE FUNCTION ll_create_bitemporal_table(
   $BODY$
 LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION ll_create_interval_bitemporal_table(
+CREATE OR REPLACE FUNCTION create_interval_bitemporal_table(
   p_table TEXT,
   p_table_definition TEXT,
   p_business_key TEXT
@@ -672,7 +675,7 @@ CREATE OR REPLACE FUNCTION ll_create_interval_bitemporal_table(
   $BODY$
     BEGIN
       RETURN (
-        SELECT * FROM ll_create_bitemporal_table(
+        SELECT * FROM create_bitemporal_table(
           p_table,
           p_table_definition,
           p_business_key,
@@ -683,7 +686,7 @@ CREATE OR REPLACE FUNCTION ll_create_interval_bitemporal_table(
   $BODY$
 LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION ll_create_event_bitemporal_table(
+CREATE OR REPLACE FUNCTION create_event_bitemporal_table(
   p_table TEXT,
   p_table_definition TEXT,
   p_business_key TEXT
@@ -691,7 +694,7 @@ CREATE OR REPLACE FUNCTION ll_create_event_bitemporal_table(
   $BODY$
     BEGIN
       RETURN (
-        SELECT * FROM ll_create_bitemporal_table(
+        SELECT * FROM create_bitemporal_table(
           p_table,
           p_table_definition,
           p_business_key,
@@ -726,7 +729,7 @@ $GBODY$
                     AND pa.attnum=pad.adnum
                   WHERE (adsrc NOT LIKE 'nextval%' OR adsrc IS NULL)
                     AND attname !='asserted'
-                    AND attname !='effective'
+                    AND attname !='valid'
                     AND attname !='row_created_at'
                     AND attname NOT LIKE '%dropped%'
                   ORDER BY pa.attnum
@@ -753,7 +756,7 @@ $GBODY$
                   AND adrelid=attrelid
                   AND pa.attnum=pad.adnum
                 WHERE attname !='asserted'
-                  AND attname !='effective'
+                  AND attname !='valid'
                   AND attname !='row_created_at'
                   AND attname NOT LIKE '%dropped%'
                 ORDER BY pa.attnum
@@ -788,7 +791,7 @@ $$
     RETURN(
       SELECT 
         coalesce(max(CASE WHEN a.attname='asserted' THEN 1 ELSE 0 END),0) +
-          coalesce(max(CASE WHEN a.attname='effective' THEN 1 ELSE 0 END),0)=2
+          coalesce(max(CASE WHEN a.attname='valid' THEN 1 ELSE 0 END),0)=2
         AND EXISTS(
           SELECT 1
           FROM pg_attribute ac
@@ -818,7 +821,7 @@ CREATE OR REPLACE FUNCTION ll_check_bitemporal_update_conditions(
   p_table TEXT,
   p_search_fields TEXT,  -- search fields
   p_search_values TEXT,  --  search values
-  p_effective timeperiod  -- effective range of the update
+  p_valid timeperiod  -- valid range of the update
 ) 
 RETURNS integer AS
 $BODY$
@@ -829,17 +832,17 @@ $BODY$
         SELECT count(*) 
         FROM %s
         WHERE ( %s )=( %s )
-          AND (is_overlaps(effective::timeperiod, %L::timeperiod)
-          OR is_meets(effective::timeperiod, %L::timeperiod)
-          OR has_finishes(effective::timeperiod, %L::timeperiod))
+          AND (is_overlaps(valid::timeperiod, %L::timeperiod)
+          OR is_meets(valid::timeperiod, %L::timeperiod)
+          OR has_finishes(valid::timeperiod, %L::timeperiod))
           AND now()<@ asserted
       $s$,
       p_table,
       p_search_fields,
       p_search_values,
-      p_effective,
-      p_effective,
-      p_effective
+      p_valid,
+      p_valid,
+      p_valid
     ) INTO v_records_found;
 
     RETURN v_records_found;          
@@ -847,7 +850,7 @@ $BODY$
 $BODY$
 LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION ll_bitemporal_correction(
+CREATE OR REPLACE FUNCTION bitemporal_correction(
   p_table TEXT,
   p_list_of_fields TEXT,
   p_list_of_values TEXT,
@@ -902,8 +905,8 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_correction(
       EXECUTE FORMAT(
         $i$
           WITH inst AS (
-            INSERT INTO %s ( %s, effective, asserted )
-              SELECT %s, effective, timeperiod_range(upper(asserted), 'infinity', '[)')
+            INSERT INTO %s ( %s, valid, asserted )
+              SELECT %s, valid, timeperiod_range(upper(asserted), 'infinity', '[)')
               FROM %s
               WHERE ( %s ) IN ( %s ) 
             RETURNING %s
@@ -956,7 +959,7 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_correction(
   $BODY$
 LANGUAGE plpgsql VOLATILE; 
  
-CREATE OR REPLACE FUNCTION ll_bitemporal_correction(
+CREATE OR REPLACE FUNCTION bitemporal_correction(
   p_table TEXT,
   p_list_of_fields TEXT,
   p_list_of_values TEXT,
@@ -966,7 +969,7 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_correction(
   $BODY$
     BEGIN
       RETURN (
-        SELECT * FROM ll_bitemporal_correction(
+        SELECT * FROM bitemporal_correction(
           p_table,
           p_list_of_fields,
           p_list_of_values,
@@ -979,7 +982,7 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_correction(
   $BODY$
 LANGUAGE plpgsql VOLATILE;
 
-CREATE OR REPLACE FUNCTION ll_bitemporal_delete(
+CREATE OR REPLACE FUNCTION bitemporal_delete(
   p_table TEXT,
   p_search_fields TEXT,  -- search fields
   p_search_values TEXT,  --  search values
@@ -1010,7 +1013,7 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_delete(
   $BODY$
 LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION ll_bitemporal_delete(
+CREATE OR REPLACE FUNCTION bitemporal_delete(
   p_table TEXT,
   p_search_fields TEXT,  -- search fields
   p_search_values TEXT  --  search values
@@ -1018,7 +1021,7 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_delete(
   $BODY$
     BEGIN
       RETURN (
-        SELECT * FROM ll_bitemporal_delete(
+        SELECT * FROM bitemporal_delete(
           p_table,
           p_search_fields,
           p_search_values,
@@ -1029,18 +1032,18 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_delete(
   $BODY$
 LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION ll_bitemporal_inactivate(
+CREATE OR REPLACE FUNCTION bitemporal_inactivate(
   p_table TEXT,
   p_search_fields TEXT,  -- search fields
   p_search_values TEXT, --  search values
-  p_effective timeperiod, -- inactive starting
+  p_valid timeperiod, -- inactive starting
   p_asserted timeperiod -- will be asserted
 ) RETURNS INTEGER AS
   $BODY$
     DECLARE
       v_rowcount INT := 0;
       v_list_of_fields_to_insert TEXT := ' ';
-      v_list_of_fields_to_insert_excl_effective TEXT;
+      v_list_of_fields_to_insert_excl_valid TEXT;
       v_table_attr TEXT[];
       v_now timestamptz := now(); -- so that we can reference this time
       v_keys INT[];
@@ -1057,22 +1060,14 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_inactivate(
       THEN v_serial_key := (SELECT split_part(p_table, '.', 2) || '_key');
     ELSE v_serial_key := p_table || '_key';
     END IF;
-
-  /* IF (bitemporal_internal.ll_check_bitemporal_update_conditions(p_table 
-                                                        ,p_search_fields 
-                                                        ,p_search_values
-                                                        ,p_effective)  =0 )
-  THEN RAISE EXCEPTION'Nothing to inactivate: % = %, effective %', p_search_fields, p_search_values, p_effective; 
-    RETURN v_rowcount;
-  END IF;   
-  */
+    
     v_table_attr := ll_bitemporal_list_of_fields(p_table);
     IF ARRAY_LENGTH(v_table_attr, 1) = 0
       THEN RAISE EXCEPTION 'Empty list of fields for a table: %', p_table; 
         RETURN v_rowcount;
     END IF;
-    v_list_of_fields_to_insert_excl_effective := ARRAY_TO_STRING(v_table_attr, ',', '');
-    v_list_of_fields_to_insert := v_list_of_fields_to_insert_excl_effective || ',effective';
+    v_list_of_fields_to_insert_excl_valid := ARRAY_TO_STRING(v_table_attr, ',', '');
+    v_list_of_fields_to_insert := v_list_of_fields_to_insert_excl_valid || ',valid';
     
   --end assertion period for the old record(s)
 
@@ -1081,9 +1076,9 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_inactivate(
         WITH updt AS (
           UPDATE %s 
           SET asserted = timeperiod(LOWER(asserted), lower(%L::timeperiod))
-          WHERE ( %s )=( %s ) AND (is_overlaps(effective, %L)
-              OR is_meets(effective, %L)
-              OR has_finishes(effective, %L))
+          WHERE ( %s )=( %s ) AND (is_overlaps(valid, %L)
+              OR is_meets(valid, %L)
+              OR has_finishes(valid, %L))
             AND (is_overlaps(asserted, %L) --now() <@ asserted
               OR has_finishes(asserted, %L)) RETURNING %s)
         SELECT array_agg(%s) FROM updt
@@ -1092,28 +1087,27 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_inactivate(
       p_asserted,
       p_search_fields,
       p_search_values,
-      p_effective,
-      p_effective,
-      p_effective,
+      p_valid,
+      p_valid,
+      p_valid,
       p_asserted,
       p_asserted,
       v_serial_key,
       v_serial_key
     ) INTO v_keys_old;
             
-  --insert new assertion range with old values and effective-ended
-  
+    --insert new assertion range with old values and valid-ended
     EXECUTE FORMAT(
       $i$
-        INSERT INTO %s (%s, effective, asserted)
-        SELECT %s, timeperiod(LOWER(effective), LOWER(%L::timeperiod)), %L
+        INSERT INTO %s (%s, valid, asserted)
+        SELECT %s, timeperiod(LOWER(valid), LOWER(%L::timeperiod)), %L
         FROM %s
         WHERE ( %s ) in ( %s )
       $i$,
       p_table,
-      v_list_of_fields_to_insert_excl_effective,
-      v_list_of_fields_to_insert_excl_effective,
-      p_effective,
+      v_list_of_fields_to_insert_excl_valid,
+      v_list_of_fields_to_insert_excl_valid,
+      p_valid,
       p_asserted,
       p_table,
       v_serial_key,
@@ -1126,20 +1120,20 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_inactivate(
   $BODY$
 LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION ll_bitemporal_inactivate(
+CREATE OR REPLACE FUNCTION bitemporal_inactivate(
   p_table TEXT,
   p_search_fields TEXT,  -- search fields
   p_search_values TEXT,  --  search values
-  p_effective timeperiod -- inactive starting
+  p_valid timeperiod -- inactive starting
 ) RETURNS INTEGER AS
   $BODY$
     BEGIN
       RETURN (
-        SELECT * FROM ll_bitemporal_inactivate(
+        SELECT * FROM bitemporal_inactivate(
           p_table,
           p_search_fields,
           p_search_values,
-          p_effective,
+          p_valid,
           timeperiod(now(), 'infinity')
         )
       );
@@ -1147,7 +1141,7 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_inactivate(
   $BODY$
 LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION ll_bitemporal_inactivate(
+CREATE OR REPLACE FUNCTION bitemporal_inactivate(
   p_table TEXT,
   p_search_fields TEXT,  -- search fields
   p_search_values TEXT  --  search values
@@ -1155,7 +1149,7 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_inactivate(
   $BODY$
     BEGIN
       RETURN (
-        SELECT * FROM ll_bitemporal_inactivate(
+        SELECT * FROM bitemporal_inactivate(
           p_table,
           p_search_fields,
           p_search_values,
@@ -1167,28 +1161,28 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_inactivate(
   $BODY$
 LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION ll_bitemporal_insert(
+CREATE OR REPLACE FUNCTION bitemporal_insert(
   p_table TEXT,
   p_list_of_fields TEXT,
   p_list_of_values TEXT,
-  p_effective anyelement,
+  p_valid anyelement,
   p_asserted timeperiod
 ) RETURNS INTEGER AS
   $BODY$
     DECLARE
       v_rowcount INT := 0;
     BEGIN
-      IF (SELECT * FROM ll_is_data_type_correct(p_table, p_effective))
+      IF (SELECT * FROM bitemporal_is_data_type_correct(p_table, p_valid))
         THEN EXECUTE FORMAT(
           $i$
-            INSERT INTO %s (%s, effective, asserted)
+            INSERT INTO %s (%s, valid, asserted)
             VALUES (%s, %L, %L)
             RETURNING *
           $i$,
           p_table,
           p_list_of_fields,
           p_list_of_values,
-          p_effective,
+          p_valid,
           p_asserted
         );
         GET DIAGNOSTICS v_rowcount := ROW_COUNT;
@@ -1199,20 +1193,20 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_insert(
   $BODY$
 LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION ll_bitemporal_insert(
+CREATE OR REPLACE FUNCTION bitemporal_insert(
   p_table TEXT,
   p_list_of_fields TEXT,
   p_list_of_values TEXT,
-  p_effective anyelement
+  p_valid anyelement
 ) RETURNS INTEGER AS
   $BODY$
     BEGIN
       RETURN (
-        SELECT * FROM ll_bitemporal_insert(
+        SELECT * FROM bitemporal_insert(
           p_table,
           p_list_of_fields,
           p_list_of_values,
-          p_effective,
+          p_valid,
           timeperiod(now(), 'infinity')
         )
       );
@@ -1220,7 +1214,7 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_insert(
   $BODY$
 LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION ll_bitemporal_insert(
+CREATE OR REPLACE FUNCTION bitemporal_insert(
   p_table TEXT,
   p_list_of_fields TEXT,
   p_list_of_values TEXT
@@ -1229,10 +1223,10 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_insert(
     DECLARE
       table_type TEXT;
     BEGIN
-      table_type := (SELECT * FROM ll_bitemporal_table_type(p_table));
+      table_type := (SELECT * FROM bitemporal_table_type(p_table));
       IF table_type = 'interval' THEN
         RETURN (
-          SELECT * FROM ll_bitemporal_insert(
+          SELECT * FROM bitemporal_insert(
             p_table,
             p_list_of_fields,
             p_list_of_values,
@@ -1242,7 +1236,7 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_insert(
         );
       ELSE 
         RETURN (
-          SELECT * FROM ll_bitemporal_insert(
+          SELECT * FROM bitemporal_insert(
             p_table,
             p_list_of_fields,
             p_list_of_values,
@@ -1255,13 +1249,13 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_insert(
   $BODY$
 LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION ll_bitemporal_update(
+CREATE OR REPLACE FUNCTION bitemporal_update(
   p_table TEXT,
   p_list_of_fields text, -- fields to update
   p_list_of_values TEXT,  -- values to update with
   p_search_fields TEXT,  -- search fields
   p_search_values TEXT,  --  search values
-  p_effective anyelement,  -- effective range of the update
+  p_valid anyelement,  -- valid range of the update
   p_asserted timeperiod  -- assertion for the update
 ) RETURNS INTEGER AS
   $BODY$
@@ -1274,7 +1268,7 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_update(
       v_keys INT[];
       v_now timestamptz := now(); -- so that we can reference this time
     BEGIN
-      IF NOT (SELECT * FROM ll_is_data_type_correct(p_table, p_effective))
+      IF NOT (SELECT * FROM bitemporal_is_data_type_correct(p_table, p_valid))
         THEN RETURN v_rowcount;
       END IF;
 
@@ -1297,21 +1291,21 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_update(
 
       v_list_of_fields_to_insert := ARRAY_TO_STRING(v_table_attr, ',', '');
 
-      v_keys_old := (SELECT * FROM ll_bitemporal_update_end_assertion(
+      v_keys_old := (SELECT * FROM bitemporal_update_end_assertion(
         p_table,
         p_search_fields,
         p_search_values,
-        p_effective,
+        p_valid,
         p_asserted,
         v_serial_key,
         v_list_of_fields_to_insert
       ));
 
-      -- Insert new assertion with old values and new effective
+      -- Insert new assertion with old values and new valid
       EXECUTE FORMAT(
         $i$
           WITH inst AS (
-            INSERT INTO %s ( %s, effective, asserted )
+            INSERT INTO %s ( %s, valid, asserted )
               SELECT %s ,%L, %L
               FROM %s
               WHERE ( %s ) IN (%s )
@@ -1323,7 +1317,7 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_update(
         p_table,
         v_list_of_fields_to_insert,
         v_list_of_fields_to_insert,
-        p_effective,
+        p_valid,
         p_asserted,
         p_table,
         v_serial_key,
@@ -1352,11 +1346,11 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_update(
   $BODY$
 LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION ll_bitemporal_update_end_assertion(
+CREATE OR REPLACE FUNCTION bitemporal_update_end_assertion(
   p_table TEXT,
   p_search_fields TEXT,  -- search fields
   p_search_values TEXT,  --  search values
-  p_effective timeperiod,
+  p_valid timeperiod,
   p_asserted timeperiod,  -- assertion for the update
   v_serial_key TEXT,
   v_list_of_fields_to_insert TEXT
@@ -1371,9 +1365,9 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_update_end_assertion(
           WITH updt AS (
             UPDATE %s SET asserted = timeperiod(LOWER(asserted), LOWER(%L::timeperiod))
             WHERE ( %s )=( %s ) AND
-              (is_overlaps(effective, %L)
-                OR is_meets(effective::timeperiod, %L)
-                OR has_finishes(effective::timeperiod, %L))
+              (is_overlaps(valid, %L)
+                OR is_meets(valid::timeperiod, %L)
+                OR has_finishes(valid::timeperiod, %L))
               AND now() <@ asserted
             RETURNING %s
           )
@@ -1384,25 +1378,25 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_update_end_assertion(
         p_asserted,
         p_search_fields,
         p_search_values,
-        p_effective,
-        p_effective,
-        p_effective,
+        p_valid,
+        p_valid,
+        p_valid,
         v_serial_key,
         v_serial_key
       ) INTO v_keys_old;
 
-      -- Insert new assertion rage with old values and effective-ended
+      -- Insert new assertion rage with old values and valid-ended
       EXECUTE FORMAT(
         $i$
-          INSERT INTO %s ( %s, effective, asserted )
-            SELECT %s, timeperiod(LOWER(effective), LOWER(%L::timeperiod)), %L
+          INSERT INTO %s ( %s, valid, asserted )
+            SELECT %s, timeperiod(LOWER(valid), LOWER(%L::timeperiod)), %L
             FROM %s
             WHERE ( %s ) in ( %s )
         $i$,
         p_table,
         v_list_of_fields_to_insert,
         v_list_of_fields_to_insert,
-        p_effective,
+        p_valid,
         p_asserted,
         p_table,
         v_serial_key,
@@ -1414,11 +1408,11 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_update_end_assertion(
   $BODY$
 LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION ll_bitemporal_update_end_assertion(
+CREATE OR REPLACE FUNCTION bitemporal_update_end_assertion(
   p_table TEXT,
   p_search_fields TEXT,  -- search fields
   p_search_values TEXT,  --  search values
-  p_effective timestamptz,
+  p_valid timestamptz,
   p_asserted timeperiod,  -- assertion for the update
   v_serial_key TEXT,
   v_list_of_fields_to_insert TEXT
@@ -1451,25 +1445,25 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_update_end_assertion(
   $BODY$
 LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION ll_bitemporal_update(
+CREATE OR REPLACE FUNCTION bitemporal_update(
   p_table TEXT,
   p_list_of_fields text, -- fields to update
   p_list_of_values TEXT,  -- values to update with
   p_search_fields TEXT,  -- search fields
   p_search_values TEXT,  --  search values
-  p_effective anyelement  -- effective range of the update
+  p_valid anyelement  -- valid range of the update
 ) RETURNS INTEGER AS
   $BODY$
     BEGIN
-      IF (SELECT * FROM ll_is_data_type_correct(p_table, p_effective))
+      IF (SELECT * FROM bitemporal_is_data_type_correct(p_table, p_valid))
         THEN RETURN (
-          SELECT * FROM ll_bitemporal_update(
+          SELECT * FROM bitemporal_update(
             p_table,
             p_list_of_fields,
             p_list_of_values,
             p_search_fields,
             p_search_values,
-            p_effective,
+            p_valid,
             timeperiod(now(), 'infinity')
           )
         );
@@ -1479,7 +1473,7 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_update(
   $BODY$
 LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION ll_bitemporal_update(
+CREATE OR REPLACE FUNCTION bitemporal_update(
   p_table TEXT,
   p_list_of_fields text, -- fields to update
   p_list_of_values TEXT,  -- values to update with
@@ -1490,10 +1484,10 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_update(
     DECLARE
       table_type TEXT;
     BEGIN
-      table_type := (SELECT * FROM ll_bitemporal_table_type(p_table));
+      table_type := (SELECT * FROM bitemporal_table_type(p_table));
       IF table_type = 'interval' THEN
         RETURN (
-          SELECT * FROM ll_bitemporal_update(
+          SELECT * FROM bitemporal_update(
             p_table,
             p_list_of_fields,
             p_list_of_values,
@@ -1505,7 +1499,7 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_update(
         );
       ELSE 
         RETURN (
-          SELECT * FROM ll_bitemporal_update(
+          SELECT * FROM bitemporal_update(
             p_table,
             p_list_of_fields,
             p_list_of_values,
@@ -1520,7 +1514,7 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_update(
   $BODY$
 LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION ll_bitemporal_table_type(
+CREATE OR REPLACE FUNCTION bitemporal_table_type(
   p_table TEXT
 ) RETURNS TEXT AS
   $BODY$
@@ -1545,7 +1539,7 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_table_type(
           FROM information_schema.columns
           WHERE table_name = '%s'
             AND table_schema = '%s'
-            AND column_name = 'effective'
+            AND column_name = 'valid'
         $i$,
         temp_table_name,
         schema_name
@@ -1557,31 +1551,31 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_table_type(
       ELSIF (SELECT data_type = 'timestamp with time zone')
         THEN RETURN('event'); 
       ELSE
-        RAISE EXCEPTION 'Invalid data type for effective';
+        RAISE EXCEPTION 'Invalid data type for valid';
         RETURN('unknown'); 
       END IF;
     END;
   $BODY$
 LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION ll_is_data_type_correct(
+CREATE OR REPLACE FUNCTION bitemporal_is_data_type_correct(
   p_table TEXT,
-  p_effective anyelement
+  p_valid anyelement
 ) RETURNS BOOLEAN AS
   $BODY$
     DECLARE
-      table_type TEXT := (SELECT * FROM ll_bitemporal_table_type(p_table));
-      effective_type TEXT := (SELECT pg_typeof(p_effective));
+      table_type TEXT := (SELECT * FROM bitemporal_table_type(p_table));
+      valid_type TEXT := (SELECT pg_typeof(p_valid));
       is_correct BOOLEAN := 'false';
     BEGIN
-      IF (effective_type = 'timeperiod' AND table_type = 'interval')
-        OR (effective_type = 'timestamp with time zone' AND table_type = 'event')
+      IF (valid_type = 'timeperiod' AND table_type = 'interval')
+        OR (valid_type = 'timestamp with time zone' AND table_type = 'event')
           THEN is_correct = 'true';
-      ELSIF effective_type != 'timeperiod' OR effective_type != 'timestamp with time zone'
-        THEN RAISE NOTICE 'Effective type is incorrect'
-          USING HINT = 'Effective must be timeperiod or timestamptz';
+      ELSIF valid_type != 'timeperiod' OR valid_type != 'timestamp with time zone'
+        THEN RAISE NOTICE 'Valid type is incorrect'
+          USING HINT = 'Valid must be timeperiod or timestamptz';
       ELSE
-        RAISE NOTICE 'Effective type does not match with the table';
+        RAISE NOTICE 'Valid type does not match with the table';
       END IF;
 
       RETURN is_correct;
@@ -1589,11 +1583,11 @@ CREATE OR REPLACE FUNCTION ll_is_data_type_correct(
   $BODY$
 LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION ll_bitemporal_correction_effective(
+CREATE OR REPLACE FUNCTION bitemporal_correction_valid(
   p_table TEXT,
   p_search_field TEXT,
   p_search_value TEXT,
-  p_effective anyelement,
+  p_valid anyelement,
   p_asserted time_endpoint
 ) RETURNS INTEGER AS
   $BODY$
@@ -1603,7 +1597,7 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_correction_effective(
       v_list_of_fields_to_insert TEXT := ' ';
       tes TEXT;
     BEGIN
-      IF NOT (SELECT * FROM ll_is_data_type_correct(p_table, p_effective))
+      IF NOT (SELECT * FROM bitemporal_is_data_type_correct(p_table, p_valid))
         THEN RETURN v_rowcount;
       END IF;
 
@@ -1613,7 +1607,7 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_correction_effective(
         RETURN v_rowcount;
       END IF;
 
-      v_rowcount := (SELECT * FROM ll_bitemporal_delete(p_table, p_search_field, p_search_value, p_asserted));
+      v_rowcount := (SELECT * FROM bitemporal_delete(p_table, p_search_field, p_search_value, p_asserted));
       
       IF (v_rowcount = 0)
         THEN RETURN v_rowcount;
@@ -1623,7 +1617,7 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_correction_effective(
 
       EXECUTE FORMAT(
         $i$
-          INSERT INTO %s ( %s, effective, asserted )
+          INSERT INTO %s ( %s, valid, asserted )
             SELECT %s, %L, timeperiod_range(%L, 'infinity', '[)]')
             FROM %s
             WHERE %s = %s
@@ -1633,7 +1627,7 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_correction_effective(
         p_table,
         v_list_of_fields_to_insert,
         v_list_of_fields_to_insert,
-        p_effective,
+        p_valid,
         p_asserted,
         p_table,
         p_search_field,
@@ -1646,21 +1640,21 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_correction_effective(
   $BODY$
 LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION ll_bitemporal_correction_effective(
+CREATE OR REPLACE FUNCTION bitemporal_correction_valid(
   p_table TEXT,
   p_search_field TEXT,
   p_search_value TEXT,
-  p_effective anyelement
+  p_valid anyelement
 ) RETURNS INTEGER AS
   $BODY$
     BEGIN
-      IF (SELECT * FROM ll_is_data_type_correct(p_table, p_effective))
+      IF (SELECT * FROM bitemporal_is_data_type_correct(p_table, p_valid))
         THEN RETURN (
-          SELECT * FROM ll_bitemporal_correction_effective(
+          SELECT * FROM bitemporal_correction_valid(
             p_table,
             p_search_field,
             p_search_value,
-            p_effective,
+            p_valid,
             now()
           )
         );
@@ -1670,7 +1664,7 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_correction_effective(
   $BODY$
 LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION ll_bitemporal_correction_effective(
+CREATE OR REPLACE FUNCTION bitemporal_correction_valid(
   p_table TEXT,
   p_search_field TEXT,
   p_search_value TEXT
@@ -1679,11 +1673,11 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_correction_effective(
     DECLARE
       table_type TEXT;
     BEGIN
-      table_type := (SELECT * FROM ll_bitemporal_table_type(p_table));
+      table_type := (SELECT * FROM bitemporal_table_type(p_table));
       
       IF table_type = 'interval' THEN
         RETURN (
-          SELECT * FROM ll_bitemporal_correction_effective(
+          SELECT * FROM bitemporal_correction_valid(
             p_table,
             p_search_field,
             p_search_value,
@@ -1693,7 +1687,7 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_correction_effective(
         );
       ELSE
         RETURN (
-          SELECT * FROM ll_bitemporal_correction_effective(
+          SELECT * FROM bitemporal_correction_valid(
             p_table,
             p_search_field,
             p_search_value,
@@ -1702,6 +1696,139 @@ CREATE OR REPLACE FUNCTION ll_bitemporal_correction_effective(
           )
         );
       END IF;
+    END;
+  $BODY$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE PROCEDURE bitemporal_fk_constraint(
+  parent_table TEXT,
+  parent_business_key TEXT,
+  child_table TEXT,
+  child_business_key TEXT
+) AS
+  $BODY$
+    DECLARE
+      trigger_func_name TEXT;
+      trigger_name TEXT;
+      p_temp_table_name TEXT;
+      p_temp_schema_name TEXT;
+      c_temp_table_name TEXT;
+      c_temp_schema_name TEXT;
+      p_valid_type TEXT := (SELECT * FROM bitemporal_table_type(parent_table));
+      c_valid_type TEXT := (SELECT * FROM bitemporal_table_type(child_table));
+      is_parent_bitemporal BOOLEAN := (SELECT p_valid_type LIKE 'unknown');
+      is_child_bitemporal BOOLEAN := (SELECT c_valid_type LIKE 'unknown');
+    BEGIN
+      IF (is_parent_bitemporal IS TRUE) OR (is_child_bitemporal IS TRUE) THEN
+        RAISE NOTICE 'Table is not bitemporal';
+        RETURN;
+      END IF;
+
+      IF (SELECT parent_table LIKE '%.%') THEN
+        p_temp_schema_name := (SELECT split_part(parent_table, '.', 1));
+        p_temp_table_name := (SELECT split_part(parent_table, '.', 2));
+      ELSE
+        p_temp_schema_name := 'public';
+        p_temp_table_name := parent_table;
+      END IF;
+
+      IF (SELECT child_table LIKE '%.%') THEN
+        c_temp_schema_name := (SELECT split_part(child_table, '.', 1));
+        c_temp_table_name := (SELECT split_part(child_table, '.', 2));
+        trigger_name := c_temp_schema_name || '_' || c_temp_table_name || '_' || child_business_key || '_fk';
+        trigger_func_name := 
+          p_temp_schema_name || '_' ||
+          p_temp_table_name || '_' ||
+          c_temp_schema_name || '_' ||
+          c_temp_table_name ||
+          '_fk_validate';
+      ELSE
+        c_temp_schema_name := 'public';
+        c_temp_table_name := child_table;
+        trigger_name := child_table || '_' || child_business_key || '_fk';
+        trigger_func_name :=
+          parent_table || '_' ||
+          child_table || '_' ||
+          '_fk_validate';
+      END IF;
+
+      IF (p_valid_type = 'interval') THEN
+        EXECUTE FORMAT(
+          $trigger$
+            CREATE OR REPLACE FUNCTION %s()
+            RETURNS trigger AS
+            $b$
+              DECLARE
+                v_value integer;
+                v_result boolean;
+                v_cnt int;
+              BEGIN
+                v_value := NEW.%s;
+                IF v_value IS NOT NULL THEN
+                  SELECT COUNT(*) INTO v_cnt
+                  FROM %s a
+                  WHERE %s = v_value AND NEW.valid <@ a.valid AND NEW.asserted <@ a.asserted;
+
+                  IF v_cnt = 0 THEN
+                    RAISE EXCEPTION 'Foreign key constraint validated';
+                  END IF;
+                END IF;
+
+                RETURN NEW;
+              END;
+            $b$
+            LANGUAGE plpgsql;
+          $trigger$,
+          trigger_func_name,
+          child_business_key,
+          parent_table,
+          parent_business_key 
+        );
+      ELSE
+        EXECUTE FORMAT(
+          $trigger$
+            CREATE OR REPLACE FUNCTION %s()
+            RETURNS trigger AS
+            $b$
+              DECLARE
+                v_value integer;
+                v_result boolean;
+                v_cnt int;
+              BEGIN
+                v_value := NEW.%s;
+                IF v_value IS NOT NULL THEN
+                  SELECT COUNT(*) INTO v_cnt
+                  FROM %s a
+                  WHERE %s = v_value AND NEW.asserted <@ a.asserted;
+
+                  IF v_cnt = 0 THEN
+                    RAISE EXCEPTION 'Foreign key constraint validated';
+                  END IF;
+                END IF;
+
+                RETURN NEW;
+              END;
+            $b$
+            LANGUAGE plpgsql;
+          $trigger$,
+          trigger_func_name,
+          child_business_key,
+          parent_table,
+          parent_business_key 
+        );
+      END IF;
+
+      EXECUTE FORMAT(
+        $t$
+          CREATE TRIGGER %s
+          BEFORE INSERT OR UPDATE ON %s
+          FOR EACH ROW
+          EXECUTE PROCEDURE %s();
+        $t$,
+        trigger_name,
+        child_table,
+        trigger_func_name
+      ); 
     END;
   $BODY$
 LANGUAGE plpgsql;
