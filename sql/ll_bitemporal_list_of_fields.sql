@@ -18,7 +18,7 @@ RETURN ( array(SELECT attname
                                                         AND pa.attnum=pad.adnum
                           WHERE (adsrc NOT LIKE 'nextval%' OR adsrc IS NULL)
                                 AND attname !='asserted'
-                                AND attname !='effective'
+                                AND attname !='valid'
                                 AND attname !='row_created_at'
                                 and attname not like '%dropped%'
                         ORDER BY pa.attnum));
@@ -38,7 +38,7 @@ RETURN ( array(SELECT attname
                                                         AND adrelid=attrelid
                                                         AND pa.attnum=pad.adnum
                           WHERE  attname !='asserted'
-                                AND attname !='effective'
+                                AND attname !='valid'
                                 AND attname !='row_created_at'
                                 AND attname not like '%dropped%'
                         ORDER BY pa.attnum));

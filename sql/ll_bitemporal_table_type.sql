@@ -23,7 +23,7 @@ CREATE OR REPLACE FUNCTION bitemporal_internal.ll_bitemporal_table_type(
           FROM information_schema.columns
           WHERE table_name = '%s'
             AND table_schema = '%s'
-            AND column_name = 'effective'
+            AND column_name = 'valid'
         $i$,
         temp_table_name,
         schema_name

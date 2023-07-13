@@ -10,8 +10,6 @@ CREATE OR REPLACE PROCEDURE bitemporal_internal.ll_bitemporal_fk_constraint(
       p_temp_schema_name TEXT;
       c_temp_table_name TEXT;
       c_temp_schema_name TEXT;
-      p_valid_type TEXT := (SELECT * FROM bitemporal_internal.ll_bitemporal_table_type(parent_table));
-      c_valid_type TEXT := (SELECT * FROM bitemporal_internal.ll_bitemporal_table_type(child_table));
     BEGIN
       IF (SELECT source_table LIKE '%.%') THEN
         p_temp_schema_name := (SELECT split_part(parent_table, '.', 1));

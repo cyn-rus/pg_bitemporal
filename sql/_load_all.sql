@@ -33,6 +33,7 @@ set search_path to bitemporal_internal, public;
 \ir ll_bitemporal_table_type.sql
 \ir ll_is_data_type_correct.sql
 \ir ll_bitemporal_correction_effective.sql
+\ir ll_bitemporal_coalesce.sql
 
 commit;
 
