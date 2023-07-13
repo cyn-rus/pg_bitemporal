@@ -1,3 +1,5 @@
+DROP SCHEMA bt_tutorial CASCADE;
+
 CREATE SCHEMA IF NOT EXISTS bt_tutorial;
 grant usage on schema bitemporal_internal to public;
 

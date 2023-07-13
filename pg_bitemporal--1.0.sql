@@ -1903,12 +1903,18 @@ CREATE OR REPLACE FUNCTION bitemporal_coalesce(
         view_name
       )
       LOOP
+        -- '
         loop_result_text := TEXT(ARRAY[loop_result]);
         curr_key := split_part(split_part(loop_result_text, ',', 1), '(', 2);
         temp := LTRIM(loop_result_text, split_part(loop_result_text, ',', 1));
-        curr_record := REPLACE(split_part(temp, split_part(temp, ',\"[\"\"', 3), 1), '\"', '''');
-        curr_record := REPLACE(curr_record, '''''', '''');
-        curr_record := LEFT(SUBSTRING(curr_record, 2, length(curr_record)), -4);
+
+        IF (table_type = 'interval') THEN
+          curr_record := REPLACE(split_part(temp, split_part(temp, ',\"[\"\"', 3), 1), '\"', '''');
+          curr_record := REPLACE(curr_record, '''''', '''');
+          curr_record := LEFT(SUBSTRING(curr_record, 2, length(curr_record)), -4);
+        ELSE
+          curr_record := RIGHT(REPLACE(split_part(temp, ',\"[\"\"', 1), '\"', ''''), -1);
+        END IF;
 
         lower_asserted := LOWER(loop_result.asserted);
 
@@ -1925,8 +1931,6 @@ CREATE OR REPLACE FUNCTION bitemporal_coalesce(
           IF is_coalesce THEN
             is_coalesce := false;
             valid_value := split_part(prev_record, '[', 2);
-            valid_start := split_part(valid_value, ',', 1);
-            valid_end := LEFT(split_part(valid_value, ',', 2), -2);
             prev_record := split_part(prev_record, ',''[' ,1);
             prev_record := REPLACE(prev_record, '''', '');
             prev_record := '''' || REPLACE(prev_record, ',', ''',''') || '''';
@@ -1943,19 +1947,36 @@ CREATE OR REPLACE FUNCTION bitemporal_coalesce(
               );
             END LOOP;
 
-            EXECUTE FORMAT(
-              $insert$
-                INSERT INTO %s(%s, valid, asserted)
-                VALUES(%s, timeperiod('%s', '%s'), timeperiod('%s', '%s'))
-              $insert$,
-              p_table,
-              table_columns_string,
-              prev_record,
-              REPLACE(valid_start, '''', ''),
-              REPLACE(valid_end, '''', ''),
-              REPLACE(asserted_start, '''', ''),
-              REPLACE(asserted_end, '''', '')
-            );
+            IF (table_type = 'interval') THEN
+              valid_start := split_part(valid_value, ',', 1);
+              valid_end := LEFT(split_part(valid_value, ',', 2), -2);
+              EXECUTE FORMAT(
+                $insert$
+                  INSERT INTO %s(%s, valid, asserted)
+                  VALUES(%s, timeperiod('%s', '%s'), timeperiod('%s', '%s'))
+                $insert$,
+                p_table,
+                table_columns_string,
+                prev_record,
+                REPLACE(valid_start, '''', ''),
+                REPLACE(valid_end, '''', ''),
+                REPLACE(asserted_start, '''', ''),
+                REPLACE(asserted_end, '''', '')
+              );
+            ELSE
+              prev_record := prev_record || '::timestamptz';
+              EXECUTE_FORMAT(
+                $insert$
+                  INSERT INTO %s(%s, valid, asserted)
+                  VALUES(%s, timeperiod('%s', '%s'))
+                $insert$,
+                p_table,
+                table_columns_string,
+                prev_record,
+                REPLACE(asserted_start, '''', ''),
+                REPLACE(asserted_end, '''', '')
+              );
+            END IF;
           END IF;
         END IF;
 
@@ -1967,6 +1988,57 @@ CREATE OR REPLACE FUNCTION bitemporal_coalesce(
         prev_record := curr_record;
         prev_key := curr_key;
       END LOOP;
+
+      IF is_coalesce THEN
+        prev_record := split_part(prev_record, ',''[' ,1);
+        prev_record := REPLACE(prev_record, '''', '');
+        prev_record := '''' || REPLACE(prev_record, ',', ''',''') || '''';
+
+        FOR count IN 1..array_length(coalesce_keys, 1) LOOP
+          EXECUTE FORMAT(
+            $del$
+              DELETE FROM %s
+              WHERE %s = %s
+            $del$,
+            p_table,
+            v_serial_key,
+            coalesce_keys[count]
+          );
+        END LOOP;
+
+        IF (table_type = 'interval') THEN
+          valid_value := split_part(prev_record, '[', 2);
+          valid_start := split_part(valid_value, ',', 1);
+          valid_end := LEFT(split_part(valid_value, ',', 2), -2);
+          EXECUTE FORMAT(
+            $insert$
+              INSERT INTO %s(%s, valid, asserted)
+              VALUES(%s, timeperiod('%s', '%s'), timeperiod('%s', '%s'))
+            $insert$,
+            p_table,
+            table_columns_string,
+            prev_record,
+            REPLACE(valid_start, '''', ''),
+            REPLACE(valid_end, '''', ''),
+            REPLACE(asserted_start, '''', ''),
+            REPLACE(asserted_end, '''', '')
+          );
+        ELSE
+          prev_record := prev_record || '::timestamptz';
+          EXECUTE_FORMAT(
+            $insert$
+              INSERT INTO %s(%s, valid, asserted)
+              VALUES(%s, timeperiod('%s', '%s'))
+            $insert$,
+            p_table,
+            table_columns_string,
+            prev_record,
+            REPLACE(asserted_start, '''', ''),
+            REPLACE(asserted_end, '''', '')
+          );
+        END IF;
+      END IF;
+
       GET DIAGNOSTICS v_rowcount := ROW_COUNT;  
       RETURN v_rowcount;
    END;
