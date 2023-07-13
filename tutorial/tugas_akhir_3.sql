@@ -410,7 +410,7 @@ SELECT * FROM bitemporal_delete(
 );
 
 -- Valid Correction
-SELECT * FROM bitemporal_correction_effective(
+SELECT * FROM bitemporal_correction_valid(
   'tugas_akhir_3.events',
   'type',
   $$ 'Meeting 1' $$,
@@ -418,7 +418,7 @@ SELECT * FROM bitemporal_correction_effective(
   time_endpoint('2023-06-22 15:27')
 );
 
-SELECT * FROM bitemporal_correction_effective(
+SELECT * FROM bitemporal_correction_valid(
   'tugas_akhir_3.contract',
   'name',
   $$ 'Sarah Johnson' $$,
