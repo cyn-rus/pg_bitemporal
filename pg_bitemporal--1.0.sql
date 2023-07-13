@@ -1903,7 +1903,6 @@ CREATE OR REPLACE FUNCTION bitemporal_coalesce(
         view_name
       )
       LOOP
-        -- '
         loop_result_text := TEXT(ARRAY[loop_result]);
         curr_key := split_part(split_part(loop_result_text, ',', 1), '(', 2);
         temp := LTRIM(loop_result_text, split_part(loop_result_text, ',', 1));
@@ -1931,6 +1930,8 @@ CREATE OR REPLACE FUNCTION bitemporal_coalesce(
           IF is_coalesce THEN
             is_coalesce := false;
             valid_value := split_part(prev_record, '[', 2);
+            valid_start := split_part(valid_value, ',', 1);
+            valid_end := LEFT(split_part(valid_value, ',', 2), -2);
             prev_record := split_part(prev_record, ',''[' ,1);
             prev_record := REPLACE(prev_record, '''', '');
             prev_record := '''' || REPLACE(prev_record, ',', ''',''') || '''';
@@ -1965,7 +1966,7 @@ CREATE OR REPLACE FUNCTION bitemporal_coalesce(
               );
             ELSE
               prev_record := prev_record || '::timestamptz';
-              EXECUTE_FORMAT(
+              EXECUTE FORMAT(
                 $insert$
                   INSERT INTO %s(%s, valid, asserted)
                   VALUES(%s, timeperiod('%s', '%s'))
@@ -2025,7 +2026,7 @@ CREATE OR REPLACE FUNCTION bitemporal_coalesce(
           );
         ELSE
           prev_record := prev_record || '::timestamptz';
-          EXECUTE_FORMAT(
+          EXECUTE FORMAT(
             $insert$
               INSERT INTO %s(%s, valid, asserted)
               VALUES(%s, timeperiod('%s', '%s'))
@@ -2038,7 +2039,7 @@ CREATE OR REPLACE FUNCTION bitemporal_coalesce(
           );
         END IF;
       END IF;
-
+      
       GET DIAGNOSTICS v_rowcount := ROW_COUNT;  
       RETURN v_rowcount;
    END;
